@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f3a5f"><title>LBO Campo</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--fg:#14263b;--mut:#5e6f83;--bd:#dde4ee;--ac:#2563eb;--ok:#15803d;--warn:#b45309;--bad:#c62828}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1422;--card:#132235;--fg:#e7eef8;--mut:#93a6bd;--bd:#253a52;--ac:#4c8dff;--ok:#34c47c;--warn:#f2b441;--bad:#f26b6b}}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 16px calc(12px);padding-top:max(12px,env(safe-area-inset-top));background:#1f3a5f;color:#fff}
+header b{font-size:17px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}header button{background:transparent;border:1px solid #ffffff55;color:#fff;border-radius:8px;padding:6px 10px;font-size:13px}
+main{padding:14px 16px 90px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:18px;margin:4px 0 12px}p.m{color:var(--mut);margin:4px 0 12px;font-size:13.5px}
+label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:10px 0 4px}
+input,textarea,select{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--fg);font:inherit;font-size:16px}
+button.p{width:100%;padding:14px;border:0;border-radius:12px;background:var(--ac);color:#fff;font-size:16px;font-weight:700;margin-top:14px}
+button.p:disabled{opacity:.5}
+.list button{display:flex;width:100%;align-items:center;gap:12px;text-align:left;padding:13px 14px;margin:0 0 8px;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:12px;font:inherit}
+.list button span:first-child{flex:1;min-width:0}.list button span:not(:first-child){flex:none}.list small{display:block;color:var(--mut);font-size:12.5px}
+.bar{height:7px;border-radius:5px;background:var(--bd);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--ok)}
+.pct{font-weight:700;font-size:14px;white-space:nowrap}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.quick button{padding:10px 0;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--fg);font-weight:700;font-size:15px}
+.lk{display:block;margin:12px auto 0;background:none;border:0;color:var(--ac,#2563eb);font-size:14px;text-decoration:underline;cursor:pointer}
+.msg{padding:10px 12px;border-radius:10px;margin:10px 0;font-size:14px}.msg.e{background:#c6282820;color:var(--bad)}.msg.o{background:#15803d20;color:var(--ok)}.msg.w{background:#b4530920;color:var(--warn)}
+.fila{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--bd);font-size:13.5px;display:flex;gap:10px;align-items:center}
+.fila[hidden]{display:none}.fila b{flex:1}.fila button{padding:8px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--card);color:var(--fg)}
+.back{background:none;border:0;color:var(--ac);font-size:15px;padding:0;margin-bottom:8px}
+.tag{font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--bd);color:var(--mut);white-space:nowrap}
+</style></head><body>
+<header><b id="t">LBO Campo</b><button id="sair" hidden>Sair</button></header>
+<main id="app"></main>
+<div class="fila" id="fila" hidden><b id="filaTxt"></b><button id="filaBtn">Enviar agora</button></div>
+<script>
+'use strict';
+const URL_='https://wgmwzmwvrpaxoxnsjmnq.supabase.co',KEY='sb_publishable_Pp94QNlYCaeYFCo4vL-0ew_YKW6ZsmN';
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fq=v=>(Number(v)||0).toLocaleString('pt-BR',{maximumFractionDigits:3});
+const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let S=ls.get('lboCampoSessao',null),obra=null,pac=null,regs=[];
+if(S&&!S.fb)S=null; // sessão antiga (login do Supabase): pede para entrar de novo pelo Firebase
+// Login igual ao do programa: Firebase (e-mail e senha do LBO). O token do Firebase é aceito pelo Supabase (autenticação de terceiros).
+const FB_KEY='AIzaSyCrsI2esZMITVDb-mhZs11HqoAV2g43fhM',FB_PROJ='lbo-engenharia';
+function claims(t){try{const b=String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(Array.from(atob(b),c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('')));}catch(e){throw Error('Resposta de login inválida.');}}
+function sessao(j,old){const tok=j.idToken||j.id_token,uid=j.localId||j.user_id,c=claims(tok);
+ if(c.iss!=='https://securetoken.google.com/'+FB_PROJ||c.aud!==FB_PROJ||c.sub!==uid||c.role!=='authenticated'||c.lbo_legacy_uid!==uid)throw Error('Esta conta ainda não foi vinculada ao LBO online. Peça ao administrador para concluir a migração.');
+ if(old&&old.user&&old.user.id!==uid)throw Error('A renovação retornou outra conta. Entre novamente.');
+ return {fb:1,access_token:tok,refresh_token:j.refreshToken||j.refresh_token,expires_at:c.exp*1000,user:{id:uid,email:j.email||c.email||old?.user?.email||''}};}
+async function fb(url,body,form){let r;try{r=await fetch(url+'?key='+FB_KEY,{method:'POST',headers:{'Content-Type':form?'application/x-www-form-urlencoded':'application/json','X-Firebase-Locale':'pt'},body:form?new URLSearchParams(body).toString():JSON.stringify(body)});}catch(e){throw Error('Sem conexão. Tente de novo quando tiver sinal.');}
+ const j=await r.json().catch(()=>({}));if(!r.ok){const c=String(j?.error?.message||'');
+  throw Error(/INVALID_LOGIN|INVALID_PASSWORD|EMAIL_NOT_FOUND|USER_NOT_FOUND|INVALID_EMAIL/.test(c)?'E-mail ou senha incorretos.':/TOO_MANY/.test(c)?'Muitas tentativas. Aguarde alguns minutos.':/USER_DISABLED/.test(c)?'Esta conta está desativada.':/TOKEN_EXPIRED|INVALID_REFRESH|USER_NOT_FOUND/.test(c)?'Sessão expirada. Entre novamente.':'Falha no login ('+(c||r.status)+').');}
+ return j;}
+async function entrar(email,senha){S=sessao(await fb('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword',{email,password:senha,returnSecureToken:true}));ls.set('lboCampoSessao',S);}
+async function refresh(){if(!S?.refresh_token)throw Error('Sessão expirada. Entre novamente.');S=sessao(await fb('https://securetoken.googleapis.com/v1/token',{grant_type:'refresh_token',refresh_token:S.refresh_token},true),S);ls.set('lboCampoSessao',S);}
+async function esqueci(email){await fb('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',{requestType:'PASSWORD_RESET',email}).catch(e=>{if(!/incorretos/.test(e.message))throw e;});}
+async function api(path,opt={}){if(!S)throw Error('Entre novamente.');if(Date.now()>(S.expires_at||0)-60000)await refresh();
+ const r=await fetch(URL_+'/rest/v1/'+path,{...opt,headers:{apikey:KEY,Authorization:'Bearer '+S.access_token,'Content-Type':'application/json',...(opt.headers||{})}});
+ if(r.status===401){if(opt._retry){S=null;ls.set('lboCampoSessao',null);throw Error('Entre novamente.');}await refresh();return api(path,{...opt,_retry:1});}const t=await r.text();if(!r.ok){let m=t;try{m=JSON.parse(t).message||t}catch(e){}if(/row-level security|violates|42501/i.test(m))m='Sua conta não tem permissão para registrar nesta obra (precisa ser dono, executor, supervisor ou premium).';else if(/does not exist|schema cache|42P01/i.test(m))m='O Campo ainda não foi ativado no servidor. Avise o responsável pelo LBO.';throw Error(m||('Erro '+r.status));}return t?JSON.parse(t):null;}
+function msg(cls,t){return '<div class="msg '+cls+'">'+esc(t)+'</div>';}
+function login(err,ok){$('#t').textContent='LBO Campo';$('#sair').hidden=true;
+ app.innerHTML='<div class="card"><h2>Registro de produção</h2><p class="m">Entre com o mesmo e-mail e senha do LBO Engenharia. Só são enviados dados leves (serviço, pavimento, quantidade e observação).</p>'+(err?msg('e',err):'')+(ok?msg('o',ok):'')+'<form id="f"><label>E-mail</label><input name="e" type="email" autocomplete="username" required><label>Senha</label><input name="s" type="password" autocomplete="current-password" required><button class="p">Entrar</button></form><button type="button" id="esq" class="lk">Esqueci a senha</button></div>';
+ $('#f').e.value=ls.get('lboCampoEmail','');
+ $('#f').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;try{ls.set('lboCampoEmail',e.target.e.value.trim());await entrar(e.target.e.value.trim(),e.target.s.value);obras();}catch(x){login(x.message);}};
+ $('#esq').onclick=async()=>{const em=$('#f').e.value.trim();if(!em){login('Digite o seu e-mail e toque de novo em "Esqueci a senha".');return;}try{await esqueci(em);login(null,'Se o e-mail estiver cadastrado, chegará um link para criar uma nova senha.');}catch(x){login(x.message);}};}
+async function obras(){$('#sair').hidden=false;$('#t').textContent='LBO Campo';app.innerHTML='<p class="m">Carregando obras…</p>';
+ try{const rows=await api('lbo_campo_pacotes?select=obra_id,atualizado_em,obra:conteudo->obra&order=atualizado_em.desc');ls.set('lboCampoObras',rows);mostrarObras(rows);}
+ catch(e){const rows=ls.get('lboCampoObras',null);if(rows){mostrarObras(rows,'Sem conexão: mostrando a última lista salva.');}else app.innerHTML=msg('e',e.message)+'<button class="p" onclick="obras()">Tentar de novo</button>';}}
+function mostrarObras(rows,aviso){app.innerHTML=(aviso?msg('w',aviso):'')+'<h2>Obras</h2>'+(rows.length?'<div class="list">'+rows.map(r=>'<button data-o="'+esc(r.obra_id)+'"><span><b>'+esc(r.obra?.nome||'Obra')+'</b><small>Atualizada no programa em '+esc(new Date(r.atualizado_em).toLocaleString('pt-BR'))+'</small></span>›</button>').join('')+'</div>':'<p class="m">Nenhuma obra liberada para o celular. No programa, abra a obra e use Linha de Balanço → Mais ações → Campo (celular) → Publicar para o celular.</p>');
+ app.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>abrirObra(b.dataset.o));}
+async function abrirObra(id){app.innerHTML='<p class="m">Carregando…</p>';
+ try{const [p]=await api('lbo_campo_pacotes?select=conteudo,atualizado_em&obra_id=eq.'+encodeURIComponent(id));if(!p)throw Error('Obra não encontrada.');pac=p.conteudo;obra={id,nome:pac.obra?.nome||'Obra'};ls.set('lboCampoPac_'+id,pac);
+  regs=await api('lbo_campo_registros?select=servico_id,setor,data,qtd,autor_email,criado_em,importado_em&obra_id=eq.'+encodeURIComponent(id)+'&order=criado_em.desc&limit=300');ls.set('lboCampoRegs_'+id,regs);}
+ catch(e){pac=ls.get('lboCampoPac_'+id,null);regs=ls.get('lboCampoRegs_'+id,[]);if(!pac){app.innerHTML=msg('e',e.message)+'<button class="p" onclick="obras()">Voltar</button>';return;}obra={id,nome:pac.obra?.nome||'Obra'};}
+ servicos();}
+function ultimo(sid,u){const s=pac.servicos.find(x=>x.id===sid);let best={qtd:Number(s?.exec?.[u-1])||0,data:s?.execData?.[u-1]||'',src:'programa'};
+ const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u)];
+ for(const r of cands)if(String(r.data)>=String(best.data)){best={qtd:Number(r.qtd),data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
+function servicos(){$('#t').textContent=obra.nome;
+ app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><h2>Serviços</h2><div class="list">'+pac.servicos.map(s=>{const tot=s.dist.reduce((a,b)=>a+(+b||0),0),ex=s.dist.reduce((a,q,i)=>a+Math.min(+q||0,ultimo(s.id,i+1).qtd),0),p=tot?ex/tot*100:0;
+  return '<button data-s="'+esc(s.id)+'"><span><b>'+esc(s.nome)+'</b><small>'+fq(ex)+' de '+fq(tot)+' '+esc(s.un)+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span><span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
+ app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>setores(b.dataset.s));}
+function setores(sid){const s=pac.servicos.find(x=>x.id===sid);
+ app.innerHTML='<button class="back" id="bk">‹ Serviços</button><h2>'+esc(s.nome)+'</h2><p class="m">Toque no pavimento para registrar a quantidade executada acumulada.</p><div class="list">'+pac.setores.map((n,i)=>{const q=+s.dist[i]||0;if(!(q>0))return '';const l=ultimo(sid,i+1),p=Math.min(100,l.qtd/q*100);
+  return '<button data-u="'+(i+1)+'"><span><b>'+esc(n)+'</b><small>'+fq(l.qtd)+' de '+fq(q)+' '+esc(s.un)+(l.data?' · '+esc(l.data.split('-').reverse().join('/')):'')+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(l.src==='na fila'?'<span class="tag">na fila</span>':l.src==='enviado'?'<span class="tag">enviado</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
+ $('#bk').onclick=servicos;app.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>registrar(sid,+b.dataset.u));}
+function registrar(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),q=+s.dist[u-1]||0,l=ultimo(sid,u);
+ app.innerHTML='<button class="back" id="bk">‹ '+esc(s.nome)+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Planejado: '+fq(q)+' '+esc(s.un)+' · último registro: '+fq(l.qtd)+'</p>'+(aviso?msg('e',aviso):'')+
+ '<label>Quantidade executada acumulada ('+esc(s.un)+')</label><input id="q" inputmode="decimal" value="'+String(l.qtd).replace('.',',')+'"><div class="quick"><button data-p="25">25%</button><button data-p="50">50%</button><button data-p="75">75%</button><button data-p="100">100%</button></div>'+
+ '<label>Data</label><input id="d" type="date" value="'+hoje()+'" max="'+hoje()+'"><label>Observação (opcional)</label><textarea id="o" rows="2" maxlength="300" placeholder="Ex.: falta material na ala norte"></textarea><button class="p" id="go">Registrar</button></div>';
+ $('#bk').onclick=()=>setores(sid);app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{$('#q').value=String(Math.round(q*b.dataset.p/100*1000)/1000).replace('.',',');});
+ $('#go').onclick=()=>{const v=Number(String($('#q').value).replace(/\./g,'').replace(',','.'));if(!Number.isFinite(v)||v<0||v>q+1e-9)return registrar(sid,u,'Informe uma quantidade entre 0 e '+fq(q)+'.');if(!$('#d').value)return registrar(sid,u,'Informe a data.');
+  const f=fila();f.push({obra_id:obra.id,servico_id:sid,setor:u,data:$('#d').value,qtd:v,obs:$('#o').value.trim().slice(0,300)||null,autor_email:S?.user?.email||null,local:Date.now()});ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>setores(sid));};}
+function fila(){return ls.get('lboCampoFila',[]);}
+function mostrarFila(){const f=fila();$('#fila').hidden=!f.length;$('#filaTxt').textContent=f.length+' registro(s) aguardando envio';}
+let enviando=false;
+async function enviar(){if(enviando)return;const f=fila();if(!f.length){mostrarFila();return;}enviando=true;
+ try{const body=f.map(({local,...r})=>r);await api('lbo_campo_registros',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});
+  regs=[...body.map(r=>({...r,criado_em:new Date().toISOString(),importado_em:null})),...regs];ls.set('lboCampoFila',fila().filter(x=>!f.some(y=>y.local===x.local)));}
+ catch(e){/* sem conexão: fica na fila */}finally{enviando=false;mostrarFila();}}
+$('#filaBtn').onclick=()=>enviar().then(()=>{if(obra&&pac)servicos();});
+$('#sair').onclick=()=>{if(fila().length&&!confirm('Há registros na fila. Sair mesmo assim? Eles continuam guardados neste celular.'))return;S=null;ls.set('lboCampoSessao',null);login();};
+window.addEventListener('online',()=>enviar());setInterval(()=>{if(navigator.onLine)enviar();},60000);
+mostrarFila();if(S)obras();else login();
+</script></body></html>
