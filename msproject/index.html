@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LBO Engenharia</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--fg:#14263b;--mut:#5e6f83;--bd:#d9e1ec;--ac:#2563eb;--ok:#15803d;--bad:#c62828;--w:#b45309}
+*{box-sizing:border-box}body{margin:0;font:13px 'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--fg)}
+header{background:#14263b;color:#fff;padding:12px 14px}header b{font-size:15px}header small{display:block;opacity:.75;margin-top:2px}
+main{padding:12px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
+h2{font-size:13.5px;margin:0 0 4px}p{margin:4px 0;color:var(--mut);line-height:1.4}
+label{display:block;font-weight:600;margin:8px 0 3px}input{width:100%;padding:7px 8px;border:1px solid var(--bd);border-radius:7px;font:inherit}
+button{width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid var(--bd);background:#fff;font:600 13px 'Segoe UI',Arial;cursor:pointer;color:var(--fg)}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}button:disabled{opacity:.55;cursor:default}
+.msg{border-radius:8px;padding:8px 10px;font-size:12.5px;border-left:4px solid var(--mut);background:#eef2f7}.msg.o{border-color:var(--ok)}.msg.e{border-color:var(--bad)}.msg.w{border-color:var(--w)}
+.lk{border:0;background:none;color:var(--ac);text-decoration:underline;width:auto;padding:0;margin-top:6px;font-weight:400}
+ul{margin:4px 0;padding-left:18px;color:var(--mut)}small.m{color:var(--mut)}
+</style>
+</head>
+<body>
+<header><b>LBO Engenharia</b><small>Cronograma ↔ Linha de Balanço</small></header>
+<main id="app"><p>Carregando…</p></main>
+<script>
+'use strict';
+/* Complemento do MS Project. Mesma conta do LBO (Firebase). Leva só dados leves: tarefas (nome, nível, duração,
+   início, predecessoras) para o LBO e o % executado de volta para as tarefas. Área própria da conta: lbo_msproject/{uid}. */
+const FB_KEY='AIzaSyCrsI2esZMITVDb-mhZs11HqoAV2g43fhM',FB_PROJ='lbo-engenharia';
+const FS='https://firestore.googleapis.com/v1/projects/'+FB_PROJ+'/databases/(default)/documents';
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let S=ls.get('lboMspSessao',null);
+function claims(t){const b=String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(Array.from(atob(b),c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('')));}
+function sessao(j,old){const tok=j.idToken||j.id_token,uid=j.localId||j.user_id,c=claims(tok);
+ if(c.aud!==FB_PROJ||c.sub!==uid||c.lbo_legacy_uid!==uid)throw Error('Esta conta ainda não foi vinculada ao LBO online.');
+ return {access_token:tok,refresh_token:j.refreshToken||j.refresh_token,expires_at:c.exp*1000,user:{id:uid,email:j.email||c.email||old?.user?.email||''}};}
+async function fb(url,body,form){let r;try{r=await fetch(url+'?key='+FB_KEY,{method:'POST',headers:{'Content-Type':form?'application/x-www-form-urlencoded':'application/json'},body:form?new URLSearchParams(body).toString():JSON.stringify(body)});}catch(e){throw Error('Sem conexão com a internet.');}
+ const j=await r.json().catch(()=>({}));if(!r.ok){const c=String(j?.error?.message||'');throw Error(/INVALID_LOGIN|INVALID_PASSWORD|EMAIL_NOT_FOUND|INVALID_EMAIL/.test(c)?'E-mail ou senha incorretos.':/TOO_MANY/.test(c)?'Muitas tentativas. Aguarde.':'Falha no login ('+(c||r.status)+').');}return j;}
+async function refresh(){S=sessao(await fb('https://securetoken.googleapis.com/v1/token',{grant_type:'refresh_token',refresh_token:S.refresh_token},true),S);ls.set('lboMspSessao',S);}
+function fv(x){if(x===null||x===undefined)return {nullValue:null};if(typeof x==='boolean')return {booleanValue:x};if(typeof x==='number')return Number.isInteger(x)?{integerValue:String(x)}:{doubleValue:x};return {stringValue:String(x)};}
+function vf(v){if(!v||'nullValue' in v)return null;if('integerValue' in v)return Number(v.integerValue);if('doubleValue' in v)return v.doubleValue;if('booleanValue' in v)return v.booleanValue;return v.stringValue??null;}
+async function fsReq(url,body,method,retry){if(Date.now()>(S.expires_at||0)-60000)await refresh();
+ const r=await fetch(url,{method:method||(body?'POST':'GET'),headers:{Authorization:'Bearer '+S.access_token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+ if(r.status===401&&!retry){await refresh();return fsReq(url,body,method,1);}const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
+ if(r.status===404)return null;if(!r.ok)throw Error(r.status===403?'Sem permissão no LBO online (confira se as regras do Firebase estão atualizadas).':(j?.error?.message||'Erro '+r.status));return j;}
+const minhaArea=()=>FS+'/lbo_msproject/'+S.user.id;
+async function lerArea(){const d=await fsReq(minhaArea());const o={};for(const [k,v] of Object.entries(d?.fields||{}))o[k]=vf(v);return o;}
+async function gravarArea(campos){const mask=Object.keys(campos).map(k=>'updateMask.fieldPaths='+encodeURIComponent(k)).join('&');
+ await fsReq(minhaArea()+'?'+mask,{fields:Object.fromEntries(Object.entries(campos).map(([k,v])=>[k,fv(v)]))},'PATCH');}
+
+// ---------- Project (Office.js) ----------
+const P=()=>Office.context.document;
+const call=(fn,...a)=>new Promise((res,rej)=>P()[fn](...a,r=>r.status===Office.AsyncResultStatus.Succeeded?res(r.value):rej(Error(r.error?.message||fn+' falhou'))));
+const campo=async(guid,f)=>{try{const v=await call('getTaskFieldAsync',guid,f);return v&&typeof v==='object'&&'fieldValue' in v?v.fieldValue:v;}catch(e){return null;}};
+function dias(v){if(v==null||v==='')return 0;if(typeof v==='number')return v/480;const s=String(v).replace(',','.');const n=parseFloat(s);if(!Number.isFinite(n))return 0;
+ if(/sem|wk|week/i.test(s))return n*5;if(/h|hr|hora/i.test(s)&&!/d/i.test(s.replace(/hora/i,'')))return n/8;if(/d|dia|day/i.test(s))return n;return n/480;} // número puro = minutos
+function dataISO(v){if(!v)return '';const s=String(v);let m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return m[0];m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(s);if(m){let y=Number(m[3]);if(y<100)y+=2000;return y+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');}const d=new Date(s);return isNaN(d)?'':d.toISOString().slice(0,10);}
+function preds(v){const out=[];for(const part of String(v||'').split(/[;,]/)){const m=/^\s*(\d+)\s*([A-Za-z]{0,2})?\s*([+-]\s*\d+(?:[.,]\d+)?)?/.exec(part);if(m)out.push({uid:m[1],lag:m[3]?parseFloat(m[3].replace(/\s/g,'').replace(',','.')):0});}return out;}
+async function lerTarefas(prog){
+ const F=Office.ProjectTaskFields,max=await call('getMaxTaskIndexAsync'),out=[];
+ for(let i=1;i<=max;i++){let guid;try{guid=await call('getTaskByIndexAsync',i);}catch(e){continue;}
+  const name=String(await campo(guid,F.Name)||'').trim();if(!name)continue;
+  out.push({guid,uid:String(await campo(guid,F.ID)||i),id:Number(await campo(guid,F.ID))||i,name,level:Number(await campo(guid,F.OutlineLevel))||1,days:dias(await campo(guid,F.Duration)),start:dataISO(await campo(guid,F.Start)),links:preds(await campo(guid,F.Predecessors))});
+  if(prog)prog(i,max);}
+ out.sort((a,b)=>a.id-b.id);out.forEach((t,k)=>{t.summary=k+1<out.length&&out[k+1].level>t.level;});return out;
+}
+const norm=s=>String(s||'').trim().toLowerCase();
+function stripNome(svc,n){for(const sep of [' — ',' - ',' – ',': '])if(n.startsWith(svc+sep))return n.slice(svc.length+sep.length).trim();return n.trim();}
+
+// ---------- Telas ----------
+function msg(c,t){return '<div class="msg '+c+'">'+esc(t)+'</div>';}
+function login(err){app.innerHTML='<div class="card"><h2>Entrar</h2><p>Use o mesmo e-mail e senha do LBO Engenharia.</p>'+(err?msg('e',err):'')+'<form id="f"><label>E-mail</label><input name="e" type="email" required><label>Senha</label><input name="s" type="password" required><button class="p">Entrar</button></form></div>';
+ $('#f').e.value=ls.get('lboMspEmail','');$('#f').onsubmit=async e=>{e.preventDefault();try{ls.set('lboMspEmail',e.target.e.value.trim());S=sessao(await fb('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword',{email:e.target.e.value.trim(),password:e.target.s.value,returnSecureToken:true}));ls.set('lboMspSessao',S);inicio();}catch(x){login(x.message);}};}
+async function inicio(aviso){
+ let area={};try{area=await lerArea();}catch(e){aviso=aviso||['e',e.message];}
+ let and=null;try{and=area.andamento?JSON.parse(area.andamento):null;}catch(e){}
+ app.innerHTML=(aviso?msg(aviso[0],aviso[1]):'')
+  +'<div class="card"><h2>1. Enviar este cronograma para o LBO</h2><p>Cada <b>tarefa-resumo</b> vira um serviço e cada <b>subtarefa</b> vira um pavimento da Linha de Balanço (a duração vira a quantidade em dias).</p><button class="p" id="env">Enviar para o LBO</button>'
+  +(area.cronograma_em?'<small class="m">Último envio: '+esc(new Date(area.cronograma_em).toLocaleString('pt-BR'))+'</small>':'')+'<p>Depois, no LBO: <b>Ferramentas → MS Project (complemento) → Importar</b>.</p></div>'
+  +'<div class="card"><h2>2. Atualizar o andamento real</h2><p>Preenche o <b>% concluído</b> das tarefas com a produção registrada no LBO (LOB, Campo e RDO). No LBO: <b>Ferramentas → MS Project (complemento) → Publicar andamento</b>.</p>'
+  +(and?'<p>Andamento publicado: <b>'+esc(and.obra||'')+'</b> · '+esc(new Date(area.andamento_em).toLocaleString('pt-BR'))+' · '+and.itens.length+' item(ns)</p>':'<p><b>Nenhum andamento publicado ainda.</b></p>')
+  +'<button id="and" '+(and?'':'disabled')+'>Atualizar % concluído no Project</button></div>'
+  +'<button class="lk" id="sair">Sair ('+esc(S.user.email)+')</button>';
+ $('#sair').onclick=()=>{S=null;ls.set('lboMspSessao',null);login();};
+ $('#env').onclick=async()=>{const b=$('#env');b.disabled=true;try{const t=await lerTarefas((i,m)=>{b.textContent='Lendo tarefas… '+i+'/'+m;});
+   const enviar=t.map(({guid,...x})=>x);if(!enviar.some(x=>x.summary))throw Error('Não encontrei tarefas-resumo. Organize: cada serviço como resumo e uma subtarefa por pavimento.');
+   const json=JSON.stringify(enviar);if(json.length>900000)throw Error('Cronograma grande demais para enviar ('+Math.round(json.length/1024)+' KB).');
+   await gravarArea({cronograma:json,cronograma_em:new Date().toISOString(),tarefas:enviar.length});inicio(['o',enviar.length+' tarefa(s) enviadas. Agora importe no LBO.']);}
+  catch(e){inicio(['e',e.message]);}};
+ $('#and').onclick=async()=>{const b=$('#and');b.disabled=true;try{
+   const t=await lerTarefas((i,m)=>{b.textContent='Lendo tarefas… '+i+'/'+m;});const F=Office.ProjectTaskFields;let ok=0,falhas=[],semPar=0;
+   const idx=new Map();for(const it of and.itens)idx.set(norm(it.servico)+'|'+norm(it.pavimento),it.pct);
+   for(let k=0;k<t.length;k++){const s=t[k];if(!s.summary)continue;for(let j=k+1;j<t.length&&t[j].level>s.level;j++){const c=t[j];if(c.summary||c.level!==s.level+1)continue;
+     const pct=idx.get(norm(s.name)+'|'+norm(stripNome(s.name,c.name)));if(pct==null){semPar++;continue;}
+     try{await call('setTaskFieldAsync',c.guid,F.PercentComplete,Math.max(0,Math.min(100,Math.round(pct))));ok++;b.textContent='Atualizando… '+ok;}catch(e){falhas.push(c.name+': '+e.message);}}}
+   inicio(falhas.length?['e','Atualizadas: '+ok+'. Falharam: '+falhas.length+' — '+falhas.slice(0,3).join(' | ')]:['o',ok+' tarefa(s) atualizadas com o % do LBO.'+(semPar?' '+semPar+' subtarefa(s) sem correspondência no LBO (nome do serviço/pavimento diferente).':'')]);}
+  catch(e){inicio(['e',e.message]);}};
+}
+window.__lboMsp={dias,dataISO,preds,stripNome};
+if(typeof Office==='undefined')app.innerHTML=msg('w','Abra esta página pelo Microsoft Project (Meus Suplementos → LBO Engenharia).');
+else Office.onReady(info=>{if(info.host!==Office.HostType.Project){app.innerHTML=msg('w','Este complemento funciona no Microsoft Project para desktop.');return;}S?inicio():login();});
+</script>
+</body>
+</html>
