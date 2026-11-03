@@ -92,10 +92,15 @@ async function inicio(aviso){
   catch(e){inicio(['e',e.message]);}};
  $('#and').onclick=async()=>{const b=$('#and');b.disabled=true;try{
    const t=await lerTarefas((i,m)=>{b.textContent='Lendo tarefas… '+i+'/'+m;});const F=Office.ProjectTaskFields;let ok=0,falhas=[],semPar=0;
-   const idx=new Map();for(const it of and.itens)idx.set(norm(it.servico)+'|'+norm(it.pavimento),it.pct);
-   for(let k=0;k<t.length;k++){const s=t[k];if(!s.summary)continue;for(let j=k+1;j<t.length&&t[j].level>s.level;j++){const c=t[j];if(c.summary||c.level!==s.level+1)continue;
-     const pct=idx.get(norm(s.name)+'|'+norm(stripNome(s.name,c.name)));if(pct==null){semPar++;continue;}
-     try{await call('setTaskFieldAsync',c.guid,F.PercentComplete,Math.max(0,Math.min(100,Math.round(pct))));ok++;b.textContent='Atualizando… '+ok;}catch(e){falhas.push(c.name+': '+e.message);}}}
+   // 1º pelas tarefas vinculadas na importação (ID do Project); o que sobrar, pelos nomes (grupo × atividade, nos dois sentidos).
+   const idx=new Map(),porId=new Map();for(const it of and.itens){idx.set(norm(it.servico)+'|'+norm(it.pavimento),it.pct);for(const u of it.uids||(it.uid?[it.uid]:[]))porId.set(String(u),it.pct);}
+   const nomeDe=n=>norm(String(n).split(' / ').pop().replace(/ \(\d+\)$/,''));for(const it of and.itens){const a=nomeDe(it.servico)+'|'+nomeDe(it.pavimento);if(!idx.has(a))idx.set(a,it.pct);}
+   const grava=async(c,pct)=>{try{await call('setTaskFieldAsync',c.guid,F.PercentComplete,Math.max(0,Math.min(100,Math.round(pct))));ok++;b.textContent='Atualizando… '+ok;}catch(e){falhas.push(c.name+': '+e.message);}};
+   const feitos=new Set();
+   if(porId.size){for(const c of t)if(!c.summary&&porId.has(String(c.uid))){await grava(c,porId.get(String(c.uid)));feitos.add(c.guid);}}
+   else for(let k=0;k<t.length;k++){const s=t[k];if(!s.summary)continue;for(let j=k+1;j<t.length&&t[j].level>s.level;j++){const c=t[j];if(c.summary||c.level!==s.level+1||feitos.has(c.guid))continue;
+     const curto=norm(stripNome(s.name,c.name)),g=norm(s.name);let pct=idx.get(g+'|'+curto);if(pct==null)pct=idx.get(curto+'|'+g);if(pct==null){semPar++;continue;}
+     await grava(c,pct);feitos.add(c.guid);}}
    inicio(falhas.length?['e','Atualizadas: '+ok+'. Falharam: '+falhas.length+' — '+falhas.slice(0,3).join(' | ')]:['o',ok+' tarefa(s) atualizadas com o % do LBO.'+(semPar?' '+semPar+' subtarefa(s) sem correspondência no LBO (nome do serviço/pavimento diferente).':'')]);}
   catch(e){inicio(['e',e.message]);}};
 }
