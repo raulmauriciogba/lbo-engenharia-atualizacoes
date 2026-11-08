@@ -29,6 +29,7 @@ button.p:disabled{opacity:.5}
 button.add{margin-top:10px;padding:10px 14px;border:1px dashed var(--bd);border-radius:10px;background:transparent;color:var(--ac);font:inherit;font-weight:600}
 .list button.ef{border-color:var(--ac)}
 .tag{font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--bd);color:var(--mut);white-space:nowrap}
+.sub{border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:10px}.sub-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.sub-h span{color:var(--mut);font-size:13px}.sub .quick{grid-template-columns:repeat(5,1fr)}.quick button.on{background:var(--ac,#2563eb);border-color:var(--ac,#2563eb);color:#fff}.sub [data-sv]{margin-top:8px}
 </style></head><body>
 <header><b id="t">LBO Campo</b><button id="sair" hidden>Sair</button></header>
 <main id="app"></main>
@@ -104,12 +105,18 @@ function mostrarObras(rows,aviso){app.innerHTML=(aviso?msg('w',aviso):'')+'<h2>O
  app.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>abrirObra(b.dataset.o));}
 async function abrirObra(id){app.innerHTML='<p class="m">Carregando…</p>';
  try{const [p]=await api('lbo_campo_pacotes?select=conteudo,atualizado_em&obra_id=eq.'+encodeURIComponent(id));if(!p)throw Error('Obra não encontrada.');pac=p.conteudo;obra={id,nome:pac.obra?.nome||'Obra'};ls.set('lboCampoPac_'+id,pac);
-  regs=await api('lbo_campo_registros?select=servico_id,setor,data,qtd,autor_email,criado_em,importado_em&obra_id=eq.'+encodeURIComponent(id)+'&order=criado_em.desc&limit=300');ls.set('lboCampoRegs_'+id,regs);}
+  regs=await api('lbo_campo_registros?select=servico_id,setor,data,qtd,autor_email,criado_em,importado_em,sub_id,pct&obra_id=eq.'+encodeURIComponent(id)+'&order=criado_em.desc&limit=300');ls.set('lboCampoRegs_'+id,regs);}
  catch(e){pac=ls.get('lboCampoPac_'+id,null);regs=ls.get('lboCampoRegs_'+id,[]);if(!pac){app.innerHTML=msg('e',e.message)+'<button class="p" onclick="obras()">Voltar</button>';return;}obra={id,nome:pac.obra?.nome||'Obra'};}
  servicos();}
 function ultimo(sid,u){const s=pac.servicos.find(x=>x.id===sid);let best={qtd:Number(s?.exec?.[u-1])||0,data:s?.execData?.[u-1]||'',src:'programa'};
- const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u)];
+ const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u&&!r.sub_id),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u&&!r.sub_id)];
  for(const r of cands)if(String(r.data)>=String(best.data)){best={qtd:Number(r.qtd),data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
+// Sub-serviços (barras dentro do serviço, vindos do MS Project): o % de cada um, pelo último registro deste celular ou o do programa.
+function temSubs(s,u){return !!(s.subs||[]).some(x=>x.pct[u-1]!==null&&x.pct[u-1]!==undefined);}
+function ultimoSub(sid,u,x){let best={pct:Number(x.pct[u-1])||0,data:'',src:'programa'};const s=pac.servicos.find(v=>v.id===sid),d0=s?.execData?.[u-1]||'';best.data=d0;
+ const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u&&r.sub_id===x.id),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u&&r.sub_id===x.id)];
+ for(const r of cands)if(String(r.data)>=String(best.data)){best={pct:Number(r.pct)||0,data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
+function pctSubs(s,u){let W=0,A=0;for(const x of s.subs||[]){if(x.pct[u-1]===null||x.pct[u-1]===undefined)continue;const w=Number(x.w?.[u-1])||1;W+=w;A+=w*ultimoSub(s.id,u,x).pct;}return W?A/W:0;}
 function servicos(){$('#t').textContent=obra.nome;
  const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Serviços</h2><div class="list">'+pac.servicos.map(s=>{const tot=s.dist.reduce((a,b)=>a+(+b||0),0),ex=s.dist.reduce((a,q,i)=>a+Math.min(+q||0,ultimo(s.id,i+1).qtd),0),p=tot?ex/tot*100:0;
   return '<button data-s="'+esc(s.id)+'"><span><b>'+esc(s.nome)+'</b><small>'+fq(ex)+' de '+fq(tot)+' '+esc(s.un)+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span><span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
@@ -140,10 +147,21 @@ function efetivo(aviso,linhas,dataSel){const ult=ls.get('lboCampoEf_'+obra.id,nu
   ls.set('lboCampoEf_'+obra.id,{data:d,total:tot,linhas:l.map(x=>({f:x.f,q:x.q}))});mostrarFila();enviar().finally(()=>{servicos();app.insertAdjacentHTML('afterbegin',msg('o','Efetivo de '+d.split('-').reverse().join('/')+' registrado: '+tot+' pessoa'+(tot===1?'':'s')+'.'));});};}
 function efLinha(x){return '<div class="efl"><input class="f" list="fl" maxlength="40" placeholder="Função" value="'+esc(x.f||'')+'"><button type="button" class="m1">−</button><input class="q" inputmode="numeric" placeholder="0" value="'+esc(x.q===''||x.q==null?'':String(x.q))+'"><button type="button" class="p1">+</button><button type="button" class="x" aria-label="Remover">×</button></div>';}
 function setores(sid){const s=pac.servicos.find(x=>x.id===sid);
- app.innerHTML='<button class="back" id="bk">‹ Serviços</button><h2>'+esc(s.nome)+'</h2><p class="m">Toque no pavimento para registrar a quantidade executada acumulada.</p><div class="list">'+pac.setores.map((n,i)=>{const q=+s.dist[i]||0;if(!(q>0))return '';const l=ultimo(sid,i+1),p=Math.min(100,l.qtd/q*100);
-  return '<button data-u="'+(i+1)+'"><span><b>'+esc(n)+'</b><small>'+fq(l.qtd)+' de '+fq(q)+' '+esc(s.un)+(l.data?' · '+esc(l.data.split('-').reverse().join('/')):'')+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(l.src==='na fila'?'<span class="tag">na fila</span>':l.src==='enviado'?'<span class="tag">enviado</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
+ app.innerHTML='<button class="back" id="bk">‹ Serviços</button><h2>'+esc(s.nome)+'</h2><p class="m">Toque no pavimento para registrar a quantidade executada acumulada.</p><div class="list">'+pac.setores.map((n,i)=>{const q=+s.dist[i]||0;if(!(q>0))return '';const sb=temSubs(s,i+1),l=ultimo(sid,i+1),p=sb?pctSubs(s,i+1):Math.min(100,l.qtd/q*100);
+  return '<button data-u="'+(i+1)+'"><span><b>'+esc(n)+'</b><small>'+(sb?'por sub-serviço ('+(s.subs||[]).filter(x=>x.pct[i]!==null&&x.pct[i]!==undefined).length+')':fq(l.qtd)+' de '+fq(q)+' '+esc(s.un)+(l.data?' · '+esc(l.data.split('-').reverse().join('/')):''))+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(l.src==='na fila'?'<span class="tag">na fila</span>':l.src==='enviado'?'<span class="tag">enviado</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
  $('#bk').onclick=servicos;app.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>registrar(sid,+b.dataset.u));}
-function registrar(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),q=+s.dist[u-1]||0,l=ultimo(sid,u);
+function registrarSubs(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),subs=(s.subs||[]).filter(x=>x.pct[u-1]!==null&&x.pct[u-1]!==undefined);const atual=subs.map(x=>ultimoSub(sid,u,x));
+ app.innerHTML='<button class="back" id="bk">‹ '+esc(s.nome)+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Marque o % executado de cada sub-serviço. Só os que mudarem são enviados.</p>'+(aviso?msg('e',aviso):'')+
+ subs.map((x,k)=>'<div class="sub" data-k="'+k+'"><div class="sub-h"><b>'+esc(x.nome)+'</b><span>atual '+fq(atual[k].pct)+'%</span></div><div class="quick">'+[0,25,50,75,100].map(p=>'<button data-sp="'+p+'" class="'+(Math.abs(atual[k].pct-p)<.05?'on':'')+'">'+p+'%</button>').join('')+'</div><input data-sv inputmode="decimal" value="'+String(atual[k].pct).replace('.',',')+'" aria-label="% de '+esc(x.nome)+'"></div>').join('')+
+ '<label>Data</label><input id="d" type="date" value="'+hoje()+'" max="'+hoje()+'"><label>Observação (opcional)</label><textarea id="o" rows="2" maxlength="300"></textarea><button class="p" id="go">Registrar</button></div>';
+ $('#bk').onclick=()=>setores(sid);
+ app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{const box=b.closest('.sub');box.querySelector('[data-sv]').value=b.dataset.sp;box.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));});
+ $('#go').onclick=()=>{if(!$('#d').value)return registrarSubs(sid,u,'Informe a data.');const novos=[];
+  for(const [k,x] of subs.entries()){const v=Number(String(app.querySelector('.sub[data-k="'+k+'"] [data-sv]').value).replace(',','.'));if(!Number.isFinite(v)||v<0||v>100)return registrarSubs(sid,u,'Use percentuais de 0 a 100 ('+x.nome+').');if(Math.abs(v-atual[k].pct)>.05)novos.push([x,v]);}
+  if(!novos.length)return registrarSubs(sid,u,'Nenhum % mudou.');
+  const f=fila(),t0=Date.now();novos.forEach(([x,v],k)=>f.push({obra_id:obra.id,servico_id:sid,setor:u,sub_id:x.id,pct:Math.round(v*10)/10,qtd:null,data:$('#d').value,obs:$('#o').value.trim().slice(0,300)||null,autor_email:S?.user?.email||null,local:t0+k}));
+  ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>setores(sid));};}
+function registrar(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),q=+s.dist[u-1]||0,l=ultimo(sid,u);if(!aviso&&temSubs(s,u))return registrarSubs(sid,u);
  app.innerHTML='<button class="back" id="bk">‹ '+esc(s.nome)+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Planejado: '+fq(q)+' '+esc(s.un)+' · último registro: '+fq(l.qtd)+'</p>'+(aviso?msg('e',aviso):'')+
  '<label>Quantidade executada acumulada ('+esc(s.un)+')</label><input id="q" inputmode="decimal" value="'+String(l.qtd).replace('.',',')+'"><div class="quick"><button data-p="25">25%</button><button data-p="50">50%</button><button data-p="75">75%</button><button data-p="100">100%</button></div>'+
  '<label>Data</label><input id="d" type="date" value="'+hoje()+'" max="'+hoje()+'"><label>Observação (opcional)</label><textarea id="o" rows="2" maxlength="300" placeholder="Ex.: falta material na ala norte"></textarea><button class="p" id="go">Registrar</button></div>';
