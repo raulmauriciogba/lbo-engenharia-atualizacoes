@@ -27,7 +27,13 @@ ul{margin:4px 0;padding-left:18px;color:var(--mut)}small.m{color:var(--mut)}
 'use strict';
 /* Complemento do MS Project. Mesma conta do LBO (Firebase). Leva só dados leves: tarefas (nome, nível, duração,
    início, predecessoras) para o LBO e o % executado de volta para as tarefas. Área própria da conta: lbo_msproject/{uid}. */
+// Versão do complemento: sobe quando muda o que é enviado ao LBO. O LBO avisa quando a versão aberta no Project é antiga.
+const VERSAO_COMPLEMENTO=3;
 const FB_KEY='AIzaSyCrsI2esZMITVDb-mhZs11HqoAV2g43fhM',FB_PROJ='lbo-engenharia';
+// O Project guarda esta página em cache: confere se há versão nova publicada e oferece recarregar.
+let versaoNova=0;
+async function conferirVersao(){try{const r=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'});const m=(await r.text()).match(/const VERSAO_COMPLEMENTO=(\d+)/);versaoNova=m&&Number(m[1])>VERSAO_COMPLEMENTO?Number(m[1]):0;}catch(e){versaoNova=0;}return versaoNova;}
+function recarregar(){location.replace(location.pathname+'?v='+Date.now());}
 const FS='https://firestore.googleapis.com/v1/projects/'+FB_PROJ+'/databases/(default)/documents';
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -63,7 +69,7 @@ async function lerTarefas(prog){
  const F=Office.ProjectTaskFields,max=await call('getMaxTaskIndexAsync'),out=[];
  for(let i=1;i<=max;i++){let guid;try{guid=await call('getTaskByIndexAsync',i);}catch(e){continue;}
   const name=String(await campo(guid,F.Name)||'').trim();if(!name)continue;
-  out.push({guid,uid:String(await campo(guid,F.ID)||i),id:Number(await campo(guid,F.ID))||i,name,level:Number(await campo(guid,F.OutlineLevel))||1,days:dias(await campo(guid,F.Duration)),start:dataISO(await campo(guid,F.Start)),links:preds(await campo(guid,F.Predecessors))});
+  out.push({guid,uid:String(await campo(guid,F.ID)||i),id:Number(await campo(guid,F.ID))||i,name,level:Number(await campo(guid,F.OutlineLevel))||1,days:dias(await campo(guid,F.Duration)),start:dataISO(await campo(guid,F.Start)),finish:dataISO(await campo(guid,F.Finish)),links:preds(await campo(guid,F.Predecessors))});
   if(prog)prog(i,max);}
  out.sort((a,b)=>a.id-b.id);out.forEach((t,k)=>{t.summary=k+1<out.length&&out[k+1].level>t.level;});return out;
 }
@@ -76,8 +82,9 @@ function login(err){app.innerHTML='<div class="card"><h2>Entrar</h2><p>Use o mes
  $('#f').e.value=ls.get('lboMspEmail','');$('#f').onsubmit=async e=>{e.preventDefault();try{ls.set('lboMspEmail',e.target.e.value.trim());S=sessao(await fb('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword',{email:e.target.e.value.trim(),password:e.target.s.value,returnSecureToken:true}));ls.set('lboMspSessao',S);inicio();}catch(x){login(x.message);}};}
 async function inicio(aviso){
  let area={};try{area=await lerArea();}catch(e){aviso=aviso||['e',e.message];}
+ await conferirVersao();
  let and=null;try{and=area.andamento?JSON.parse(area.andamento):null;}catch(e){}
- app.innerHTML=(aviso?msg(aviso[0],aviso[1]):'')
+ app.innerHTML=(versaoNova?'<div class="card" style="border-color:#f0b429"><b>Há uma versão nova do complemento ('+versaoNova+').</b><p>Esta janela está com a versão '+VERSAO_COMPLEMENTO+', guardada pelo Project. Recarregue antes de enviar.</p><button class="p" id="rec">Recarregar o complemento</button></div>':'')+(aviso?msg(aviso[0],aviso[1]):'')
   +'<div class="card"><h2>1. Enviar este cronograma para o LBO</h2><p>Cada <b>tarefa-resumo</b> vira um serviço e cada <b>subtarefa</b> vira um pavimento da Linha de Balanço (a duração vira a quantidade em dias).</p><button class="p" id="env">Enviar para o LBO</button>'
   +(area.cronograma_em?'<small class="m">Último envio: '+esc(new Date(area.cronograma_em).toLocaleString('pt-BR'))+'</small>':'')+'<p>Depois, no LBO: <b>Ferramentas → MS Project (complemento) → Importar</b>.</p></div>'
   +'<div class="card"><h2>2. Atualizar o andamento real</h2><p>Preenche o <b>% concluído</b> das tarefas com a produção registrada no LBO (LOB, Campo e RDO). No LBO: <b>Ferramentas → MS Project (complemento) → Publicar andamento</b>.</p>'
@@ -85,9 +92,11 @@ async function inicio(aviso){
   +'<button id="and" '+(and?'':'disabled')+'>Atualizar % concluído no Project</button></div>'
   +'<button class="lk" id="sair">Sair ('+esc(S.user.email)+')</button>';
  $('#sair').onclick=()=>{S=null;ls.set('lboMspSessao',null);login();};
+ {const rb=$('#rec');if(rb)rb.onclick=recarregar;app.insertAdjacentHTML('beforeend','<small class="m" style="display:block;margin-top:8px">Complemento versão '+VERSAO_COMPLEMENTO+'</small>');}
  $('#env').onclick=async()=>{const b=$('#env');b.disabled=true;try{const t=await lerTarefas((i,m)=>{b.textContent='Lendo tarefas… '+i+'/'+m;});
    const enviar=t.map(({guid,...x})=>x);if(!enviar.some(x=>x.summary))throw Error('Não encontrei tarefas-resumo. Organize: cada serviço como resumo e uma subtarefa por pavimento.');
-   const json=JSON.stringify(enviar);if(json.length>900000)throw Error('Cronograma grande demais para enviar ('+Math.round(json.length/1024)+' KB).');
+   // a versão vai na primeira tarefa (as regras do Firebase só aceitam os campos já existentes da área)
+    if(enviar[0])enviar[0].cv=VERSAO_COMPLEMENTO;const json=JSON.stringify(enviar);if(json.length>900000)throw Error('Cronograma grande demais para enviar ('+Math.round(json.length/1024)+' KB).');
    await gravarArea({cronograma:json,cronograma_em:new Date().toISOString(),tarefas:enviar.length});inicio(['o',enviar.length+' tarefa(s) enviadas. Agora importe no LBO.']);}
   catch(e){inicio(['e',e.message]);}};
  $('#and').onclick=async()=>{const b=$('#and');b.disabled=true;try{
