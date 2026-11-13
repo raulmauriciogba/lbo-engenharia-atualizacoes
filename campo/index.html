@@ -30,6 +30,7 @@ button.add{margin-top:10px;padding:10px 14px;border:1px dashed var(--bd);border-
 .list button.ef{border-color:var(--ac)}
 .tag{font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--bd);color:var(--mut);white-space:nowrap}
 .sub{border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:10px}.sub-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.sub-h span{color:var(--mut);font-size:13px}.sub .quick{grid-template-columns:repeat(5,1fr)}.quick button.on{background:var(--ac,#2563eb);border-color:var(--ac,#2563eb);color:#fff}.sub [data-sv]{margin-top:8px}
+label.cam{display:block;text-align:center;cursor:pointer;padding:14px;border-radius:12px;background:var(--ac);color:#fff!important;font-size:16px;font-weight:700;margin-top:14px}select{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--fg);font:inherit}
 </style></head><body>
 <header><b id="t">LBO Campo</b><button id="sair" hidden>Sair</button></header>
 <main id="app"></main>
@@ -94,19 +95,20 @@ async function api(path,opt={}){
 }
 function msg(cls,t){return '<div class="msg '+cls+'">'+esc(t)+'</div>';}
 function login(err,ok){$('#t').textContent='LBO Campo';$('#sair').hidden=true;
- app.innerHTML='<div class="card"><h2>Registro de produção</h2><p class="m">Entre com o mesmo e-mail e senha do LBO Engenharia. Só são enviados dados leves (serviço, pavimento, quantidade, efetivo do dia e observação).</p>'+(err?msg('e',err):'')+(ok?msg('o',ok):'')+'<form id="f"><label>E-mail</label><input name="e" type="email" autocomplete="username" required><label>Senha</label><input name="s" type="password" autocomplete="current-password" required><button class="p">Entrar</button></form><button type="button" id="esq" class="lk">Esqueci a senha</button></div>';
+ app.innerHTML='<div class="card"><h2>Registro de produção</h2><p class="m">Entre com o mesmo e-mail e senha do LBO Engenharia. '+(LINK?'Depois de entrar, abre a câmera da sala da etiqueta.':'Só são enviados dados leves (serviço, pavimento, quantidade, efetivo do dia e observação).')+'</p>'+(err?msg('e',err):'')+(ok?msg('o',ok):'')+'<form id="f"><label>E-mail</label><input name="e" type="email" autocomplete="username" required><label>Senha</label><input name="s" type="password" autocomplete="current-password" required><button class="p">Entrar</button></form><button type="button" id="esq" class="lk">Esqueci a senha</button></div>';
  $('#f').e.value=ls.get('lboCampoEmail','');
  $('#f').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;try{ls.set('lboCampoEmail',e.target.e.value.trim());await entrar(e.target.e.value.trim(),e.target.s.value);obras();}catch(x){login(x.message);}};
  $('#esq').onclick=async()=>{const em=$('#f').e.value.trim();if(!em){login('Digite o seu e-mail e toque de novo em "Esqueci a senha".');return;}try{await esqueci(em);login(null,'Se o e-mail estiver cadastrado, chegará um link para criar uma nova senha.');}catch(x){login(x.message);}};}
 async function obras(){$('#sair').hidden=false;$('#t').textContent='LBO Campo';app.innerHTML='<p class="m">Carregando obras…</p>';
  try{const rows=await api('lbo_campo_pacotes?select=obra_id,atualizado_em,obra:conteudo->obra&order=atualizado_em.desc');ls.set('lboCampoObras',rows);mostrarObras(rows);}
  catch(e){const rows=ls.get('lboCampoObras',null);if(rows){mostrarObras(rows,'Sem conexão: mostrando a última lista salva.');}else app.innerHTML=msg('e',e.message)+'<button class="p" onclick="obras()">Tentar de novo</button>';}}
-function mostrarObras(rows,aviso){app.innerHTML=(aviso?msg('w',aviso):'')+'<h2>Obras</h2>'+(rows.length?'<div class="list">'+rows.map(r=>'<button data-o="'+esc(r.obra_id)+'"><span><b>'+esc(r.obra?.nome||'Obra')+'</b><small>Atualizada no programa em '+esc(new Date(r.atualizado_em).toLocaleString('pt-BR'))+'</small></span>›</button>').join('')+'</div>':'<p class="m">Nenhuma obra liberada para o celular. No programa, abra a obra e use Linha de Balanço → Mais ações → Campo (celular) → Publicar para o celular.</p>');
+function mostrarObras(rows,aviso){if(LINK&&!aviso&&rows.some(r=>r.obra_id===LINK.o)){abrirObra(LINK.o);return;}if(LINK&&!rows.some(r=>r.obra_id===LINK.o))aviso=(aviso?aviso+' ':'')+'A obra da etiqueta não está liberada para a sua conta no celular.';app.innerHTML=(aviso?msg('w',aviso):'')+'<h2>Obras</h2>'+(rows.length?'<div class="list">'+rows.map(r=>'<button data-o="'+esc(r.obra_id)+'"><span><b>'+esc(r.obra?.nome||'Obra')+'</b><small>Atualizada no programa em '+esc(new Date(r.atualizado_em).toLocaleString('pt-BR'))+'</small></span>›</button>').join('')+'</div>':'<p class="m">Nenhuma obra liberada para o celular. No programa, abra a obra e use Linha de Balanço → Mais ações → Campo (celular) → Publicar para o celular.</p>');
  app.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>abrirObra(b.dataset.o));}
 async function abrirObra(id){app.innerHTML='<p class="m">Carregando…</p>';
  try{const [p]=await api('lbo_campo_pacotes?select=conteudo,atualizado_em&obra_id=eq.'+encodeURIComponent(id));if(!p)throw Error('Obra não encontrada.');pac=p.conteudo;obra={id,nome:pac.obra?.nome||'Obra'};ls.set('lboCampoPac_'+id,pac);
   regs=await api('lbo_campo_registros?select=servico_id,setor,data,qtd,autor_email,criado_em,importado_em,sub_id,pct&obra_id=eq.'+encodeURIComponent(id)+'&order=criado_em.desc&limit=300');ls.set('lboCampoRegs_'+id,regs);}
  catch(e){pac=ls.get('lboCampoPac_'+id,null);regs=ls.get('lboCampoRegs_'+id,[]);if(!pac){app.innerHTML=msg('e',e.message)+'<button class="p" onclick="obras()">Voltar</button>';return;}obra={id,nome:pac.obra?.nome||'Obra'};}
+ if(LINK&&LINK.o===id){const k=LINK;sessionStorage.removeItem('lboCampoLink');fotos(k.l,k.a);return;}
  servicos();}
 function ultimo(sid,u){const s=pac.servicos.find(x=>x.id===sid);let best={qtd:Number(s?.exec?.[u-1])||0,data:s?.execData?.[u-1]||'',src:'programa'};
  const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u&&!r.sub_id),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u&&!r.sub_id)];
@@ -118,9 +120,9 @@ function ultimoSub(sid,u,x){let best={pct:Number(x.pct[u-1])||0,data:'',src:'pro
  for(const r of cands)if(String(r.data)>=String(best.data)){best={pct:Number(r.pct)||0,data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
 function pctSubs(s,u){let W=0,A=0;for(const x of s.subs||[]){if(x.pct[u-1]===null||x.pct[u-1]===undefined)continue;const w=Number(x.w?.[u-1])||1;W+=w;A+=w*ultimoSub(s.id,u,x).pct;}return W?A/W:0;}
 function servicos(){$('#t').textContent=obra.nome;
- const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Serviços</h2><div class="list">'+pac.servicos.map(s=>{const tot=s.dist.reduce((a,b)=>a+(+b||0),0),ex=s.dist.reduce((a,q,i)=>a+Math.min(+q||0,ultimo(s.id,i+1).qtd),0),p=tot?ex/tot*100:0;
+ const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="fotoBtn" class="ef"><span><b>📷 Foto do ambiente</b><small>Foto com carimbo da sala, data, GPS e endereço'+(locais().length?'':' · cadastre os ambientes no programa')+'</small></span>›</button><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Serviços</h2><div class="list">'+pac.servicos.map(s=>{const tot=s.dist.reduce((a,b)=>a+(+b||0),0),ex=s.dist.reduce((a,q,i)=>a+Math.min(+q||0,ultimo(s.id,i+1).qtd),0),p=tot?ex/tot*100:0;
   return '<button data-s="'+esc(s.id)+'"><span><b>'+esc(s.nome)+'</b><small>'+fq(ex)+' de '+fq(tot)+' '+esc(s.un)+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span><span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
- app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>setores(b.dataset.s));$('#efBtn').onclick=()=>efetivo();}
+ app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>setores(b.dataset.s));$('#efBtn').onclick=()=>efetivo();$('#fotoBtn').onclick=()=>fotos('','');}
 // Efetivo do dia: vai como um registro leve (servico_id "__efetivo__", qtd = total, obs = "Função=quantidade;...") e o programa leva para o RDO.
 const EF='__efetivo__',efLimpa=v=>String(v||'').replace(/[;=\n\r]/g,' ').replace(/\s+/g,' ').trim().slice(0,40);
 function efUltimo(){const l=ls.get('lboCampoEf_'+obra.id,null),q=fila().filter(r=>r.obra_id===obra.id&&r.servico_id===EF).at(-1);if(q)return {data:q.data,total:q.qtd,fila:1};return l?{data:l.data,total:l.total}:null;}
@@ -168,6 +170,48 @@ function registrar(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),q=+s.di
  $('#bk').onclick=()=>setores(sid);app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{$('#q').value=String(Math.round(q*b.dataset.p/100*1000)/1000).replace('.',',');});
  $('#go').onclick=()=>{const v=Number(String($('#q').value).replace(/\./g,'').replace(',','.'));if(!Number.isFinite(v)||v<0||v>q+1e-9)return registrar(sid,u,'Informe uma quantidade entre 0 e '+fq(q)+'.');if(!$('#d').value)return registrar(sid,u,'Informe a data.');
   const f=fila();f.push({obra_id:obra.id,servico_id:sid,setor:u,data:$('#d').value,qtd:v,obs:$('#o').value.trim().slice(0,300)||null,autor_email:S?.user?.email||null,local:Date.now()});ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>setores(sid));};}
+// ---------- Fotos dos ambientes: carimbo com sala, data, GPS e endereço (QR da sala abre direto aqui) ----------
+const LINK=(()=>{try{const q=new URLSearchParams(location.search);const o=q.get('o');if(o){const v={o,l:q.get('l')||'',a:q.get('a')||''};sessionStorage.setItem('lboCampoLink',JSON.stringify(v));history.replaceState(null,'',location.pathname);return v;}return JSON.parse(sessionStorage.getItem('lboCampoLink')||'null');}catch(e){return null;}})();
+let gps={pos:null,erro:'',end:'',buscando:false},fotoAtual=null;
+function iniciarGps(){if(!navigator.geolocation){gps.erro='Este celular não informa a localização.';return;}if(gps.buscando)return;gps.buscando=true;
+ navigator.geolocation.getCurrentPosition(p=>{gps.buscando=false;gps.pos={lat:p.coords.latitude,lon:p.coords.longitude,prec:Math.round(p.coords.accuracy||0),em:Date.now()};gps.erro='';atualizarGpsTela();endereco();},
+  e=>{gps.buscando=false;gps.erro=e.code===1?'Localização negada: permita o acesso à localização para o LBO Campo.':'Não foi possível obter o GPS agora.';atualizarGpsTela();},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});}
+async function endereco(){const p=gps.pos;if(!p||!navigator.onLine)return;const k='lboCampoEnd_'+p.lat.toFixed(4)+'_'+p.lon.toFixed(4),c=ls.get(k,null);if(c){gps.end=c;atualizarGpsTela();return;}
+ try{const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),6000);const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=pt-BR&lat='+p.lat+'&lon='+p.lon,{signal:ctl.signal});clearTimeout(t);
+  const j=await r.json(),a=j.address||{};const e=[[a.road,a.house_number].filter(Boolean).join(', '),a.suburb||a.neighbourhood,[a.city||a.town||a.village,a.state_code||a.state].filter(Boolean).join(' - ')].filter(Boolean).join(' · ')||j.display_name||'';
+  if(e){gps.end=e.slice(0,140);ls.set(k,gps.end);atualizarGpsTela();}}catch(e){}}
+function atualizarGpsTela(){const el=$('#gpsTxt');if(!el)return;el.innerHTML=gps.pos?('📍 '+gps.pos.lat.toFixed(6)+', '+gps.pos.lon.toFixed(6)+' (±'+gps.pos.prec+' m)'+(gps.end?'<br>'+esc(gps.end):'')):(gps.erro?'<span style="color:var(--warn)">'+esc(gps.erro)+'</span>':'Obtendo a localização…');}
+const locais=()=>Array.isArray(pac?.locais)?pac.locais:[];
+function nomeSala(l,a){const L=locais().find(x=>x.id===l),A=L?.ambientes?.find(x=>x.id===a);return L?(L.nome+(A?' › '+A.nome:'')):'';}
+function fotos(lid,aid,aviso){$('#t').textContent=obra.nome;iniciarGps();const ls_=locais();if(lid&&!ls_.some(x=>x.id===lid))aviso=aviso||'A sala da etiqueta não está no pacote do celular. No programa, publique de novo (Campo → Publicar).';
+ const L=ls_.find(x=>x.id===lid)||null;
+ app.innerHTML='<button class="back" id="bk">‹ Serviços</button><div class="card"><h2>📷 Foto do ambiente</h2>'+(aviso?msg('w',aviso):'')+
+  (ls_.length?'<label>Local</label><select id="fl">'+'<option value="">Escolha o local</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===lid?'selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'+
+  '<label>Ambiente</label><select id="fa"><option value="">'+(L?'Local inteiro':'—')+'</option>'+(L?.ambientes||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===aid?'selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'
+   :'<p class="m">Nenhum local cadastrado. No programa: Campo (celular) → Ambientes e QR, e depois Publicar.</p>')+
+  '<label>Observação (opcional, vai no carimbo)</label><input id="fo" maxlength="120" placeholder="Ex.: infiltração no forro"><p class="m" id="gpsTxt"></p>'+
+  '<label class="p cam" id="camBtn">📷 Tirar foto<input id="cam" type="file" accept="image/*" capture="environment" hidden></label></div><div id="prev"></div>';
+ atualizarGpsTela();$('#bk').onclick=servicos;
+ const fl=$('#fl');if(fl)fl.onchange=()=>fotos(fl.value,'');
+ $('#cam').onchange=async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;const l=$('#fl')?.value||'',a=$('#fa')?.value||'';$('#prev').innerHTML='<p class="m">Preparando a foto…</p>';
+  try{const blob=await carimbar(f,{sala:nomeSala(l,a)||'Sem local',obs:$('#fo').value.trim()});const nome='LBO_'+(nomeSala(l,a)||'foto').replace(/[^\wÀ-ú›-]+/g,'_').replace(/›/g,'-').slice(0,60)+'_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')+'.jpg';
+   fotoAtual={blob,nome,url:URL.createObjectURL(blob),l,a,sala:nomeSala(l,a)};mostrarFoto();}catch(x){$('#prev').innerHTML=msg('e',x.message);}};}
+function mostrarFoto(){const f=fotoAtual;if(!f)return;$('#prev').innerHTML='<div class="card"><img src="'+f.url+'" alt="" style="width:100%;border-radius:10px"><button class="p" id="salvar">💾 Salvar / compartilhar</button><p class="m">A foto fica com o carimbo da sala, data, GPS e endereço. O envio direto para o programa vem na próxima versão.</p></div>';
+ $('#salvar').onclick=async()=>{const file=new File([f.blob],f.nome,{type:'image/jpeg'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:f.sala});return;}catch(e){if(e.name==='AbortError')return;}}
+  const a=document.createElement('a');a.href=f.url;a.download=f.nome;document.body.append(a);a.click();a.remove();};}
+async function carimbar(file,{sala,obs}){let img;try{img=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){img=await new Promise((ok,err)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>err(Error('Não foi possível ler a foto.'));i.src=URL.createObjectURL(file);});}
+ const W0=img.width,H0=img.height,k=Math.min(1,2048/Math.max(W0,H0)),W=Math.round(W0*k),H=Math.round(H0*k),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(img,0,0,W,H);
+ const d=new Date(),p=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null,u=Math.max(W,H)/100;
+ const linhas=[[sala,1.9*u,'700'],[d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+obra.nome,1.25*u,'600'],
+  [p?('GPS '+p.lat.toFixed(6)+', '+p.lon.toFixed(6)+' (±'+p.prec+' m)'):'GPS indisponível',1.1*u,'400'],...(gps.end&&p?[[gps.end,1.1*u,'400']]:[]),[(S?.user?.email||'')+(obs?' · '+obs:''),1.1*u,'400']].filter(x=>x[0]);
+ const pad=1.4*u,lh=l=>l[1]*1.35;let alt=pad*2+linhas.reduce((a,l)=>a+lh(l),0);
+ const grad=g.createLinearGradient(0,H-alt-3*u,0,H);grad.addColorStop(0,'rgba(0,0,0,0)');grad.addColorStop(.25,'rgba(0,0,0,.55)');grad.addColorStop(1,'rgba(0,0,0,.78)');g.fillStyle=grad;g.fillRect(0,H-alt-3*u,W,alt+3*u);
+ g.fillStyle='#f97316';g.fillRect(pad,H-alt+pad*.4,.45*u,alt-pad*1.2);
+ let y=H-alt+pad;g.textBaseline='top';g.shadowColor='rgba(0,0,0,.6)';g.shadowBlur=u*.3;
+ for(const [t,sz,w] of linhas){g.font=w+' '+sz+'px system-ui,-apple-system,Segoe UI,Roboto,Arial';g.fillStyle=w==='700'?'#fff':'#e8eef6';let txt=String(t);while(g.measureText(txt).width>W-pad*3.2&&txt.length>4)txt=txt.slice(0,-2);if(txt!==String(t))txt=txt.slice(0,-1)+'…';g.fillText(txt,pad*2,y);y+=sz*1.35;}
+ g.shadowBlur=0;g.font='700 '+1.05*u+'px system-ui,Arial';g.fillStyle='rgba(255,255,255,.85)';const marca='LBO Campo';g.fillText(marca,W-pad-g.measureText(marca).width,pad);
+ return await new Promise((ok,err)=>c.toBlob(b=>b?ok(b):err(Error('Não foi possível gerar a foto.')),'image/jpeg',.85));}
 function fila(){return ls.get('lboCampoFila',[]);}
 function mostrarFila(){const f=fila();$('#fila').hidden=!f.length;$('#filaTxt').textContent=f.length+' registro(s) aguardando envio';}
 let enviando=false;
