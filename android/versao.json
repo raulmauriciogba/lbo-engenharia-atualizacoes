@@ -1,7 +1,7 @@
 {
- "versao": "28.8.0",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.8.0/LBO_Campo_28.8.0.apk",
+ "versao": "28.9.0",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.0/LBO_Campo_28.9.0.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-14T02:30:00.443Z",
- "notas": "LBO Campo: escolher o local antes dos serviços e fotos em sequência com leitura do QR da sala"
+ "data": "2026-11-14T22:36:26.589Z",
+ "notas": "LBO Campo com câmera própria e carimbo configurável, salvar no celular e fotos reconhecidas ao importar do Google Fotos"
 }
