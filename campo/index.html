@@ -296,7 +296,7 @@ async function sequencia(lid,aid){pararCamera();$('#t').textContent=obra.nome;in
  seq={l:ls_.some(x=>x.id===lid)?lid:'',a:aid||'',fotos:[],fila:Promise.resolve(),lendo:false,aviso:''};if(seq.l&&!ls_.find(x=>x.id===seq.l)?.ambientes?.some(x=>x.id===seq.a))seq.a='';
  app.innerHTML='<button class="back" id="bk">‹ Locais</button><div class="seq"><div class="seq-cam" id="seqCam"><video id="seqV" playsinline muted autoplay></video><canvas id="seqOv" class="seq-ov"></canvas><div class="seq-sala" id="seqSala"></div><div class="seq-alvo" id="seqAlvo" hidden></div></div>'+
   '<div class="seq-bar"><button type="button" id="seqQR" class="seq-b">🔎 Ler QR</button><button type="button" id="seqFoto" class="seq-disp" aria-label="Tirar foto"></button><button type="button" id="seqFim" class="seq-b">Concluir</button></div>'+
-  '<div id="seqMsg"></div><button type="button" class="seq-b seq-cfgb2" id="seqCfgB">⚙ Personalizar o carimbo</button><div class="card"><label>Local</label><select id="sl"><option value="">Escolha ou leia o QR</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('')+'</select><label>Ambiente</label><select id="sa"></select>'+
+  '<div id="seqMsg"></div><button type="button" class="seq-b seq-cfgb2" id="seqCfgB">⚙ Personalizar o carimbo</button><div class="card"><p class="m">A sala é opcional: leia o QR, escolha na lista ou fotografe direto.</p><label>Local</label><select id="sl"><option value="">Sem sala (só a foto)</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('')+'</select><label>Ambiente</label><select id="sa"></select>'+
   '<label>Observação (opcional, vai no carimbo de todas)</label><input id="so" maxlength="120" placeholder="Ex.: antes da pintura"><p class="m" id="gpsTxt"></p></div><div class="card seq-cfg" id="seqCfg" hidden></div>'+
   '<div class="seq-cont" id="seqCont"></div><button type="button" class="seq-b seq-gf" id="seqGF" hidden>📤 Enviar ao Google Fotos / compartilhar</button><div class="seq-thumbs" id="seqTh"></div><input id="seqIn" type="file" accept="image/*" capture="environment" hidden></div><div class="seq-ver" id="seqVer" hidden></div>';
  atualizarGpsTela();
@@ -306,17 +306,17 @@ async function sequencia(lid,aid){pararCamera();$('#t').textContent=obra.nome;in
  $('#so').oninput=desenharOv;
  $('#seqGF').onclick=async()=>{const novas=seq.fotos.filter(f=>f.blob&&!f.compartilhada),lista=novas.length?novas:seq.fotos;try{await compartilharFotos(lista);lista.forEach(f=>f.compartilhada=true);seqMsg('o','Escolha o Google Fotos (ou outro app) para guardar as '+lista.length+' foto(s). O LBO reconhece sala e data quando você importar do Google Fotos.');}catch(e){if(e.name!=='AbortError')seqMsg('w',e.message);}seqAtualizar();};$('#seqCfgB').onclick=()=>{const el=$('#seqCfg');el.hidden=!el.hidden;if(!el.hidden){montarCfg();el.scrollIntoView({behavior:'smooth',block:'nearest'});}};
  $('#seqTh').onclick=e=>{const t=e.target.closest('[data-i]');if(t)verFoto(+t.dataset.i);};
- $('#seqQR').onclick=()=>{seq.lendo=true;seq.aviso='';seqAtualizar();lerQR();};
- $('#seqFoto').onclick=()=>{if(!seq.l)return seqMsg('w','Leia o QR da sala ou escolha o local antes da foto.');if(cam)capturar();else $('#seqIn').click();};
+ $('#seqQR').onclick=()=>{if(seq.lendo){seq.lendo=false;clearInterval(qrTimer);qrTimer=null;seqAtualizar();return;}seq.lendo=true;seq.aviso='';seqAtualizar();lerQR();};
+ $('#seqFoto').onclick=()=>{if(seq.lendo){seq.lendo=false;clearInterval(qrTimer);qrTimer=null;seqMsg('','');seqAtualizar();}if(cam)capturar();else $('#seqIn').click();};
  $('#seqIn').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(f)processar(f);};
  $('#seqV').addEventListener('loadedmetadata',ajustarCam);window.addEventListener('resize',ajustarCam);
  if(navigator.geolocation){try{gpsWatch=navigator.geolocation.watchPosition(p=>{const novo=!gps.pos||Math.abs(gps.pos.lat-p.coords.latitude)>1e-4||Math.abs(gps.pos.lon-p.coords.longitude)>1e-4;gps.pos={lat:p.coords.latitude,lon:p.coords.longitude,prec:Math.round(p.coords.accuracy||0),em:Date.now()};gps.erro='';if(novo)gps.end='';atualizarGpsTela();if(novo)endereco().then(desenharOv);desenharOv();},()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}catch(e){}}
  ovTimer=setInterval(desenharOv,1000);
- await abrirCamera();if(!seq.l&&cam){seq.lendo=true;lerQR();}seqAtualizar();}
+ await abrirCamera();seqAtualizar();} // V28.9.1: não pede o QR ao abrir; a foto pode ser tirada sem sala
 // Câmera do tamanho exato da imagem, para o carimbo na tela ficar igual ao da foto.
 function ajustarCam(){const v=$('#seqV'),box=$('#seqCam');if(!v||!box||!v.videoWidth)return;const r=v.videoWidth/v.videoHeight;box.style.aspectRatio=v.videoWidth+'/'+v.videoHeight;box.style.width='min(100%, calc(64vh * '+r.toFixed(4)+'))';desenharOv();}
 function desenharOv(){const cv=$('#seqOv');if(!cv||!seq)return;const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.round(cv.clientWidth*dpr),h=Math.round(cv.clientHeight*dpr);if(!w||!h)return;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
- const g=cv.getContext('2d');g.clearRect(0,0,w,h);desenharCarimbo(g,w,h,infoCarimbo(nomeSala(seq.l,seq.a)||'Escolha a sala',$('#so')?.value.trim()||''),cfgCarimbo());}
+ const g=cv.getContext('2d');g.clearRect(0,0,w,h);desenharCarimbo(g,w,h,infoCarimbo(nomeSala(seq.l,seq.a)||'',$('#so')?.value.trim()||''),cfgCarimbo());}
 function montarCfg(){const c=cfgCarimbo(),el=$('#seqCfg');const ck=(k,t)=>'<label class="seq-ck"><input type="checkbox" data-k="'+k+'" '+(c[k]?'checked':'')+'> '+t+'</label>';
  const sel=(k,t,ops)=>'<label>'+t+'</label><select data-k="'+k+'">'+ops.map(([v,n])=>'<option value="'+v+'" '+(c[k]===v?'selected':'')+'>'+n+'</option>').join('')+'</select>';
  el.innerHTML='<h2>⚙ Carimbo da foto</h2><p class="m">Escolha o que aparece. Vale para as próximas fotos deste celular e já aparece na câmera.</p>'+ck('salvar','Salvar cada foto no celular (Imagens › LBO Campo no app; Downloads no navegador)')+'<div class="seq-cks">'+ck('sala','Local / ambiente')+ck('data','Data e hora')+ck('seg','Segundos')+ck('obra','Nome da obra')+ck('gps','Coordenadas GPS')+ck('prec','Precisão do GPS')+ck('end','Endereço')+ck('autor','Quem tirou (e-mail)')+ck('obs','Observação')+ck('marca','Marca "LBO Campo"')+'</div>'+
@@ -336,8 +336,8 @@ async function abrirCamera(){try{if(!navigator.mediaDevices?.getUserMedia)throw 
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(cam){clearInterval(qrTimer);qrTimer=null;cam.getTracks().forEach(t=>t.stop());cam=null;}}else if(seq&&document.getElementById('seqV')&&!cam)abrirCamera().then(()=>{if(seq.lendo)lerQR();});});
 function seqMsg(c,t){const el=$('#seqMsg');if(el)el.innerHTML=t?msg(c,t):'';}
 function seqAtualizar(){if(!seq||!$('#seqSala'))return;const sala=nomeSala(seq.l,seq.a);
- $('#seqSala').innerHTML=seq.lendo?'🔎 Aponte para o QR da sala…':'Leia o QR ou escolha o local abaixo';$('#seqSala').hidden=!!sala&&!seq.lendo;$('#seqSala').classList.toggle('vazio',true);desenharOv();$('#seqAlvo').hidden=!seq.lendo;
- $('#seqFoto').disabled=!seq.l;const gf=$('#seqGF'),nb=seq.fotos.filter(f=>f.blob).length,nn=seq.fotos.filter(f=>f.blob&&!f.compartilhada).length;gf.hidden=!nb;gf.textContent='📤 Enviar ao Google Fotos / compartilhar ('+(nn||nb)+')';const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
+ $('#seqSala').innerHTML='🔎 Aponte para o QR da sala… (ou toque no botão laranja para fotografar sem sala)';$('#seqSala').hidden=!seq.lendo;$('#seqQR').textContent=seq.lendo?'✕ Cancelar QR':sala?'🔎 Trocar sala (QR)':'🔎 Ler QR da sala';$('#seqSala').classList.toggle('vazio',true);desenharOv();$('#seqAlvo').hidden=!seq.lendo;
+ $('#seqFoto').disabled=false;const gf=$('#seqGF'),nb=seq.fotos.filter(f=>f.blob).length,nn=seq.fotos.filter(f=>f.blob&&!f.compartilhada).length;gf.hidden=!nb;gf.textContent='📤 Enviar ao Google Fotos / compartilhar ('+(nn||nb)+')';const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
  $('#seqCont').textContent=n?n+' foto'+(n===1?'':'s')+' · '+env+' enviada'+(env===1?'':'s')+(n-env-err>0?' · '+(n-env-err)+' na fila':'')+(err?' · '+err+' com erro':''):'';
  $('#seqTh').innerHTML=seq.fotos.map((f,i)=>[f,i]).reverse().map(([f,i])=>'<div class="seq-th" data-i="'+i+'"><img src="'+f.url+'" alt=""><span>'+(f.erro?'⚠':fotosEnviadas.has(f.filaId)?'✓':f.filaId?'⏳':'…')+'</span><small>'+esc(f.salaCurta)+'</small></div>').join('');}
 async function lerQR(){clearInterval(qrTimer);qrTimer=null;
@@ -358,7 +358,7 @@ async function capturar(){const v=$('#seqV');if(!cam||!v)return;const bt=$('#seq
  try{if(window.ImageCapture&&tr){blob=await new ImageCapture(tr).takePhoto();}}catch(e){blob=null;}
  if(!blob){const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;if(!c.width)return seqMsg('w','A câmera ainda está abrindo. Tente de novo.');c.getContext('2d').drawImage(v,0,0);blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.92));}
  processar(blob);}
-function processar(arquivo){if(!seq)return;const l=seq.l,a=seq.a,sala=nomeSala(l,a)||'Sem local',obs=$('#so')?.value.trim()||'',em=new Date(),info=infoCarimbo(sala,obs,em),gp=info.p,end=info.end;
+function processar(arquivo){if(!seq)return;const l=seq.l,a=seq.a,sala=nomeSala(l,a)||'Sem local',obs=$('#so')?.value.trim()||'',em=new Date(),info=infoCarimbo(nomeSala(l,a)||'',obs,em),gp=info.p,end=info.end;
  const item={salaCurta:(locais().find(x=>x.id===l)?.ambientes?.find(x=>x.id===a)?.nome)||sala,url:'',filaId:'',erro:''};const lista=seq.fotos;lista.push(item);seqAtualizar();
  seq.fila=seq.fila.then(async()=>{try{const id=novoIdFoto(),nome=nomeFoto(sala,em);
    const blob=await comExif(await carimbar(arquivo,info),{id,obra:obra.id,obraNome:obra.nome,l,a,sala,obs,autor:S?.user?.email||'',em:em.toISOString(),dia:hoje(),lat:gp?gp.lat:null,lon:gp?gp.lon:null,prec:gp?gp.prec:null,end:end||''});
