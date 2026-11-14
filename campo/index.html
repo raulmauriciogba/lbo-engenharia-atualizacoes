@@ -30,6 +30,14 @@ button.add{margin-top:10px;padding:10px 14px;border:1px dashed var(--bd);border-
 .list button.ef{border-color:var(--ac)}
 .tag{font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--bd);color:var(--mut);white-space:nowrap}
 .sub{border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:10px}.sub-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.sub-h span{color:var(--mut);font-size:13px}.sub .quick{grid-template-columns:repeat(5,1fr)}.quick button.on{background:var(--ac,#2563eb);border-color:var(--ac,#2563eb);color:#fff}.sub [data-sv]{margin-top:8px}
+
+.seq-cam{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4;max-height:62vh;margin:0 auto}.seq-cam video{width:100%;height:100%;object-fit:cover;display:block}
+.seq-sala{position:absolute;left:10px;right:10px;top:10px;padding:8px 12px;border-radius:10px;background:#000000a8;color:#fff;font-weight:700;font-size:15px}.seq-sala.vazio{font-weight:600;color:#ffd7b8}
+.seq-alvo{position:absolute;left:50%;top:50%;width:55%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #f97316;border-radius:16px;box-shadow:0 0 0 999px #00000040}
+.seq-bar{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:12px 0}.seq-b{padding:12px 8px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit;font-weight:600}
+.seq-disp{width:76px;height:76px;border-radius:50%;border:5px solid var(--card);background:#f97316;box-shadow:0 0 0 3px #f97316}.seq-disp:disabled{opacity:.4}.seq-disp.clic{transform:scale(.9)}
+.seq-cont{color:var(--mut);font-size:13.5px;margin:4px 0 8px}.seq-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.seq-th{position:relative}.seq-th img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--bd)}
+.seq-th span{position:absolute;right:4px;top:4px;background:#000000a0;color:#fff;border-radius:999px;font-size:12px;padding:1px 6px}.seq-th small{display:block;font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 label.cam{display:block;text-align:center;cursor:pointer;padding:14px;border-radius:12px;background:var(--ac);color:#fff!important;font-size:16px;font-weight:700;margin-top:14px}select{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--fg);font:inherit}
 </style></head><body>
 <header><b id="t">LBO Campo</b><button id="sair" hidden>Sair</button></header>
@@ -119,10 +127,17 @@ function ultimoSub(sid,u,x){let best={pct:Number(x.pct[u-1])||0,data:'',src:'pro
  const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u&&r.sub_id===x.id),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u&&r.sub_id===x.id)];
  for(const r of cands)if(String(r.data)>=String(best.data)){best={pct:Number(r.pct)||0,data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
 function pctSubs(s,u){let W=0,A=0;for(const x of s.subs||[]){if(x.pct[u-1]===null||x.pct[u-1]===undefined)continue;const w=Number(x.w?.[u-1])||1;W+=w;A+=w*ultimoSub(s.id,u,x).pct;}return W?A/W:0;}
-function servicos(){$('#t').textContent=obra.nome;
- const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="fotoBtn" class="ef"><span><b>📷 Foto do ambiente</b><small>Foto com carimbo da sala, data, GPS e endereço'+(locais().length?'':' · cadastre os ambientes no programa')+'</small></span>›</button><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Serviços</h2><div class="list">'+pac.servicos.map(s=>{const tot=s.dist.reduce((a,b)=>a+(+b||0),0),ex=s.dist.reduce((a,q,i)=>a+Math.min(+q||0,ultimo(s.id,i+1).qtd),0),p=tot?ex/tot*100:0;
-  return '<button data-s="'+esc(s.id)+'"><span><b>'+esc(s.nome)+'</b><small>'+fq(ex)+' de '+fq(tot)+' '+esc(s.un)+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span><span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
- app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>setores(b.dataset.s));$('#efBtn').onclick=()=>efetivo();$('#fotoBtn').onclick=()=>fotos('','');}
+// V28.8: primeiro o local (pavimento/setor), depois os serviços daquele local.
+function pctServ(s,u){const q=+s.dist[u-1]||0;if(!(q>0))return null;return temSubs(s,u)?pctSubs(s,u):Math.min(100,ultimo(s.id,u).qtd/q*100);}
+function servicos(){pararCamera();$('#t').textContent=obra.nome;
+ const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="fotoBtn" class="ef"><span><b>📷 Fotos do ambiente</b><small>Uma foto ou várias em sequência, com o QR da sala · carimbo com sala, data, GPS e endereço'+(locais().length?'':' · cadastre os ambientes no programa')+'</small></span>›</button><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Locais</h2><p class="m">Escolha o local para ver e atualizar os serviços dele.</p><div class="list">'+(pac.setores||[]).map((n,i)=>{const u=i+1,ps=pac.servicos.map(s=>pctServ(s,u)).filter(v=>v!==null);if(!ps.length)return '';
+  const p=ps.reduce((a,b)=>a+b,0)/ps.length,fin=ps.filter(v=>v>=99.95).length,nf=fila().filter(r=>r.obra_id===obra.id&&r.setor===u&&r.servico_id!==EF).length;
+  return '<button data-u="'+u+'"><span><b>'+esc(n)+'</b><small>'+ps.length+' serviço'+(ps.length===1?'':'s')+(fin?' · '+fin+' concluído'+(fin===1?'':'s'):'')+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(nf?'<span class="tag">'+nf+' na fila</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
+ app.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>localServicos(+b.dataset.u));$('#efBtn').onclick=()=>efetivo();$('#fotoBtn').onclick=()=>fotos('','');}
+function localServicos(u){const nome=pac.setores[u-1]||('Local '+u);
+ app.innerHTML='<button class="back" id="bk">‹ Locais</button><h2>'+esc(nome)+'</h2><p class="m">Toque no serviço para registrar o que foi executado neste local.</p><div class="list">'+pac.servicos.map(s=>{const q=+s.dist[u-1]||0;if(!(q>0))return '';const sb=temSubs(s,u),l=ultimo(s.id,u),p=pctServ(s,u);
+  return '<button data-s="'+esc(s.id)+'"><span><b>'+esc(s.nome)+'</b><small>'+(sb?'por sub-serviço ('+(s.subs||[]).filter(x=>x.pct[u-1]!==null&&x.pct[u-1]!==undefined).length+')':fq(l.qtd)+' de '+fq(q)+' '+esc(s.un)+(l.data?' · '+esc(l.data.split('-').reverse().join('/')):''))+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(l.src==='na fila'?'<span class="tag">na fila</span>':l.src==='enviado'?'<span class="tag">enviado</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
+ $('#bk').onclick=servicos;app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>registrar(b.dataset.s,u));}
 // Efetivo do dia: vai como um registro leve (servico_id "__efetivo__", qtd = total, obs = "Função=quantidade;...") e o programa leva para o RDO.
 const EF='__efetivo__',efLimpa=v=>String(v||'').replace(/[;=\n\r]/g,' ').replace(/\s+/g,' ').trim().slice(0,40);
 function efUltimo(){const l=ls.get('lboCampoEf_'+obra.id,null),q=fila().filter(r=>r.obra_id===obra.id&&r.servico_id===EF).at(-1);if(q)return {data:q.data,total:q.qtd,fila:1};return l?{data:l.data,total:l.total}:null;}
@@ -148,28 +163,24 @@ function efetivo(aviso,linhas,dataSel){const ult=ls.get('lboCampoEf_'+obra.id,nu
   fq_.push({obra_id:obra.id,servico_id:EF,setor:1,data:d,qtd:tot,obs,autor_email:S?.user?.email||null,local:Date.now()});ls.set('lboCampoFila',fq_);
   ls.set('lboCampoEf_'+obra.id,{data:d,total:tot,linhas:l.map(x=>({f:x.f,q:x.q}))});mostrarFila();enviar().finally(()=>{servicos();app.insertAdjacentHTML('afterbegin',msg('o','Efetivo de '+d.split('-').reverse().join('/')+' registrado: '+tot+' pessoa'+(tot===1?'':'s')+'.'));});};}
 function efLinha(x){return '<div class="efl"><input class="f" list="fl" maxlength="40" placeholder="Função" value="'+esc(x.f||'')+'"><button type="button" class="m1">−</button><input class="q" inputmode="numeric" placeholder="0" value="'+esc(x.q===''||x.q==null?'':String(x.q))+'"><button type="button" class="p1">+</button><button type="button" class="x" aria-label="Remover">×</button></div>';}
-function setores(sid){const s=pac.servicos.find(x=>x.id===sid);
- app.innerHTML='<button class="back" id="bk">‹ Serviços</button><h2>'+esc(s.nome)+'</h2><p class="m">Toque no pavimento para registrar a quantidade executada acumulada.</p><div class="list">'+pac.setores.map((n,i)=>{const q=+s.dist[i]||0;if(!(q>0))return '';const sb=temSubs(s,i+1),l=ultimo(sid,i+1),p=sb?pctSubs(s,i+1):Math.min(100,l.qtd/q*100);
-  return '<button data-u="'+(i+1)+'"><span><b>'+esc(n)+'</b><small>'+(sb?'por sub-serviço ('+(s.subs||[]).filter(x=>x.pct[i]!==null&&x.pct[i]!==undefined).length+')':fq(l.qtd)+' de '+fq(q)+' '+esc(s.un)+(l.data?' · '+esc(l.data.split('-').reverse().join('/')):''))+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(l.src==='na fila'?'<span class="tag">na fila</span>':l.src==='enviado'?'<span class="tag">enviado</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
- $('#bk').onclick=servicos;app.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>registrar(sid,+b.dataset.u));}
 function registrarSubs(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),subs=(s.subs||[]).filter(x=>x.pct[u-1]!==null&&x.pct[u-1]!==undefined);const atual=subs.map(x=>ultimoSub(sid,u,x));
- app.innerHTML='<button class="back" id="bk">‹ '+esc(s.nome)+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Marque o % executado de cada sub-serviço. Só os que mudarem são enviados.</p>'+(aviso?msg('e',aviso):'')+
+ app.innerHTML='<button class="back" id="bk">‹ '+esc(pac.setores[u-1])+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Marque o % executado de cada sub-serviço. Só os que mudarem são enviados.</p>'+(aviso?msg('e',aviso):'')+
  subs.map((x,k)=>'<div class="sub" data-k="'+k+'"><div class="sub-h"><b>'+esc(x.nome)+'</b><span>atual '+fq(atual[k].pct)+'%</span></div><div class="quick">'+[0,25,50,75,100].map(p=>'<button data-sp="'+p+'" class="'+(Math.abs(atual[k].pct-p)<.05?'on':'')+'">'+p+'%</button>').join('')+'</div><input data-sv inputmode="decimal" value="'+String(atual[k].pct).replace('.',',')+'" aria-label="% de '+esc(x.nome)+'"></div>').join('')+
  '<label>Data</label><input id="d" type="date" value="'+hoje()+'" max="'+hoje()+'"><label>Observação (opcional)</label><textarea id="o" rows="2" maxlength="300"></textarea><button class="p" id="go">Registrar</button></div>';
- $('#bk').onclick=()=>setores(sid);
+ $('#bk').onclick=()=>localServicos(u);
  app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{const box=b.closest('.sub');box.querySelector('[data-sv]').value=b.dataset.sp;box.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));});
  $('#go').onclick=()=>{if(!$('#d').value)return registrarSubs(sid,u,'Informe a data.');const novos=[];
   for(const [k,x] of subs.entries()){const v=Number(String(app.querySelector('.sub[data-k="'+k+'"] [data-sv]').value).replace(',','.'));if(!Number.isFinite(v)||v<0||v>100)return registrarSubs(sid,u,'Use percentuais de 0 a 100 ('+x.nome+').');if(Math.abs(v-atual[k].pct)>.05)novos.push([x,v]);}
   if(!novos.length)return registrarSubs(sid,u,'Nenhum % mudou.');
   const f=fila(),t0=Date.now();novos.forEach(([x,v],k)=>f.push({obra_id:obra.id,servico_id:sid,setor:u,sub_id:x.id,pct:Math.round(v*10)/10,qtd:null,data:$('#d').value,obs:$('#o').value.trim().slice(0,300)||null,autor_email:S?.user?.email||null,local:t0+k}));
-  ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>setores(sid));};}
+  ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>localServicos(u));};}
 function registrar(sid,u,aviso){const s=pac.servicos.find(x=>x.id===sid),q=+s.dist[u-1]||0,l=ultimo(sid,u);if(!aviso&&temSubs(s,u))return registrarSubs(sid,u);
- app.innerHTML='<button class="back" id="bk">‹ '+esc(s.nome)+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Planejado: '+fq(q)+' '+esc(s.un)+' · último registro: '+fq(l.qtd)+'</p>'+(aviso?msg('e',aviso):'')+
+ app.innerHTML='<button class="back" id="bk">‹ '+esc(pac.setores[u-1])+'</button><div class="card"><h2>'+esc(s.nome)+'<br><small style="color:var(--mut);font-size:15px">'+esc(pac.setores[u-1])+'</small></h2><p class="m">Planejado: '+fq(q)+' '+esc(s.un)+' · último registro: '+fq(l.qtd)+'</p>'+(aviso?msg('e',aviso):'')+
  '<label>Quantidade executada acumulada ('+esc(s.un)+')</label><input id="q" inputmode="decimal" value="'+String(l.qtd).replace('.',',')+'"><div class="quick"><button data-p="25">25%</button><button data-p="50">50%</button><button data-p="75">75%</button><button data-p="100">100%</button></div>'+
  '<label>Data</label><input id="d" type="date" value="'+hoje()+'" max="'+hoje()+'"><label>Observação (opcional)</label><textarea id="o" rows="2" maxlength="300" placeholder="Ex.: falta material na ala norte"></textarea><button class="p" id="go">Registrar</button></div>';
- $('#bk').onclick=()=>setores(sid);app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{$('#q').value=String(Math.round(q*b.dataset.p/100*1000)/1000).replace('.',',');});
+ $('#bk').onclick=()=>localServicos(u);app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{$('#q').value=String(Math.round(q*b.dataset.p/100*1000)/1000).replace('.',',');});
  $('#go').onclick=()=>{const v=Number(String($('#q').value).replace(/\./g,'').replace(',','.'));if(!Number.isFinite(v)||v<0||v>q+1e-9)return registrar(sid,u,'Informe uma quantidade entre 0 e '+fq(q)+'.');if(!$('#d').value)return registrar(sid,u,'Informe a data.');
-  const f=fila();f.push({obra_id:obra.id,servico_id:sid,setor:u,data:$('#d').value,qtd:v,obs:$('#o').value.trim().slice(0,300)||null,autor_email:S?.user?.email||null,local:Date.now()});ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>setores(sid));};}
+  const f=fila();f.push({obra_id:obra.id,servico_id:sid,setor:u,data:$('#d').value,qtd:v,obs:$('#o').value.trim().slice(0,300)||null,autor_email:S?.user?.email||null,local:Date.now()});ls.set('lboCampoFila',f);mostrarFila();enviar().finally(()=>localServicos(u));};}
 // ---------- Fotos dos ambientes: carimbo com sala, data, GPS e endereço (QR da sala abre direto aqui) ----------
 const LINK=(()=>{try{const q=new URLSearchParams(location.search);const o=q.get('o');if(o){const v={o,l:q.get('l')||'',a:q.get('a')||''};sessionStorage.setItem('lboCampoLink',JSON.stringify(v));history.replaceState(null,'',location.pathname);return v;}return JSON.parse(sessionStorage.getItem('lboCampoLink')||'null');}catch(e){return null;}})();
 let gps={pos:null,erro:'',end:'',buscando:false},fotoAtual=null;
@@ -183,15 +194,15 @@ async function endereco(){const p=gps.pos;if(!p||!navigator.onLine)return;const 
 function atualizarGpsTela(){const el=$('#gpsTxt');if(!el)return;el.innerHTML=gps.pos?('📍 '+gps.pos.lat.toFixed(6)+', '+gps.pos.lon.toFixed(6)+' (±'+gps.pos.prec+' m)'+(gps.end?'<br>'+esc(gps.end):'')):(gps.erro?'<span style="color:var(--warn)">'+esc(gps.erro)+'</span>':'Obtendo a localização…');}
 const locais=()=>Array.isArray(pac?.locais)?pac.locais:[];
 function nomeSala(l,a){const L=locais().find(x=>x.id===l),A=L?.ambientes?.find(x=>x.id===a);return L?(L.nome+(A?' › '+A.nome:'')):'';}
-function fotos(lid,aid,aviso){$('#t').textContent=obra.nome;iniciarGps();const ls_=locais();if(lid&&!ls_.some(x=>x.id===lid))aviso=aviso||'A sala da etiqueta não está no pacote do celular. No programa, publique de novo (Campo → Publicar).';
+function fotos(lid,aid,aviso){pararCamera();$('#t').textContent=obra.nome;iniciarGps();const ls_=locais();if(lid&&!ls_.some(x=>x.id===lid))aviso=aviso||'A sala da etiqueta não está no pacote do celular. No programa, publique de novo (Campo → Publicar).';
  const L=ls_.find(x=>x.id===lid)||null;
- app.innerHTML='<button class="back" id="bk">‹ Serviços</button><div class="card"><h2>📷 Foto do ambiente</h2>'+(aviso?msg('w',aviso):'')+
+ app.innerHTML='<button class="back" id="bk">‹ Locais</button><button class="p" id="seqBtn" style="margin:0 0 12px">📸 Fotos em sequência · ler o QR da sala</button><div class="card"><h2>📷 Uma foto</h2>'+(aviso?msg('w',aviso):'')+
   (ls_.length?'<label>Local</label><select id="fl">'+'<option value="">Escolha o local</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===lid?'selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'+
   '<label>Ambiente</label><select id="fa"><option value="">'+(L?'Local inteiro':'—')+'</option>'+(L?.ambientes||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===aid?'selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'
    :'<p class="m">Nenhum local cadastrado. No programa: Campo (celular) → Ambientes e QR, e depois Publicar.</p>')+
   '<label>Observação (opcional, vai no carimbo)</label><input id="fo" maxlength="120" placeholder="Ex.: infiltração no forro"><p class="m" id="gpsTxt"></p>'+
   '<label class="p cam" id="camBtn">📷 Tirar foto<input id="cam" type="file" accept="image/*" capture="environment" hidden></label></div><div id="prev"></div>';
- atualizarGpsTela();$('#bk').onclick=servicos;
+ atualizarGpsTela();$('#bk').onclick=servicos;$('#seqBtn').onclick=()=>sequencia($('#fl')?.value||lid||'',$('#fa')?.value||aid||'');
  const fl=$('#fl');if(fl)fl.onchange=()=>fotos(fl.value,'');
  $('#cam').onchange=async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;const l=$('#fl')?.value||'',a=$('#fa')?.value||'';$('#prev').innerHTML='<p class="m">Preparando a foto…</p>';
   try{const blob=await carimbar(f,{sala:nomeSala(l,a)||'Sem local',obs:$('#fo').value.trim()});const nome='LBO_'+(nomeSala(l,a)||'foto').replace(/[^\wÀ-ú›-]+/g,'_').replace(/›/g,'-').slice(0,60)+'_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')+'.jpg';
@@ -224,15 +235,17 @@ async function fotoParaFila(f){if(f.naFila)return;if(!obra?.id)throw Error('Abra
  await filaFotos.add({id,obra_id:obra.id,obra_nome:obra.nome,local_id:f.l||'',amb_id:f.a||'',sala:f.sala||'Sem local',obs:f.obs||'',data:hoje(),tirada_em:(f.em||agora).toISOString(),
   lat:p?p.lat:null,lon:p?p.lon:null,prec:p?p.prec:null,endereco:p&&f.end?f.end:'',nome:f.nome,largura:r.w,altura:r.h,kb:Math.round(r.jpg.length*3/4/1024),jpg:r.jpg});
  f.filaId=id;await contarFotos();}
-let enviandoFotos=false;
+let enviandoFotos=false;const fotosEnviadas=new Set();
 async function enviarFotos(){if(enviandoFotos||!S)return null;enviandoFotos=true;let enviadas=0,erro='';
  try{const lista=await filaFotos.all();for(const x of lista){const doc={...x,autor:S.user.id,autor_email:S.user.email||'',criado_em:new Date().toISOString(),importado_em:null};delete doc.obra_nome;
    try{await fsReq(FS+':commit',{writes:[{update:{name:'projects/'+FB_PROJ+'/databases/(default)/documents/lbo_obras/'+x.obra_id+'/campo_fotos/'+x.id,fields:fv(doc).mapValue.fields},currentDocument:{exists:false}}]});}
    catch(e){if(!(e.status===409||/ALREADY_EXISTS/.test(e.code||e.message))){if(/conexão/i.test(e.message))break;erro=e.message;continue;}}
-   await filaFotos.del(x.id);enviadas++;if(fotoAtual&&fotoAtual.filaId===x.id)fotoAtual.enviada=true;}}
+   await filaFotos.del(x.id);enviadas++;fotosEnviadas.add(x.id);if(fotoAtual&&fotoAtual.filaId===x.id)fotoAtual.enviada=true;}}
  catch(e){erro=e.message;}finally{enviandoFotos=false;await contarFotos();}
+ try{seqAtualizar();}catch(e){}
  if(fotoAtual&&fotoAtual.enviada&&$('#enviarFoto')){$('#enviarFoto').textContent='✓ Enviada';$('#fotoSt').innerHTML=msg('o','Foto enviada para o programa.');}
  return {enviadas,erro};}
+function nomeFoto(sala){return 'LBO_'+(sala||'foto').replace(/[^\wÀ-ú›-]+/g,'_').replace(/›/g,'-').slice(0,60)+'_'+new Date().toISOString().slice(0,19).replace(/[-:T]/g,'')+'.jpg';}
 async function carimbar(file,{sala,obs}){let img;try{img=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){img=await new Promise((ok,err)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>err(Error('Não foi possível ler a foto.'));i.src=URL.createObjectURL(file);});}
  const W0=img.width,H0=img.height,k=Math.min(1,2048/Math.max(W0,H0)),W=Math.round(W0*k),H=Math.round(H0*k),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(img,0,0,W,H);
  const d=new Date(),p=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null,u=Math.max(W,H)/100;
@@ -245,6 +258,60 @@ async function carimbar(file,{sala,obs}){let img;try{img=await createImageBitmap
  for(const [t,sz,w] of linhas){g.font=w+' '+sz+'px system-ui,-apple-system,Segoe UI,Roboto,Arial';g.fillStyle=w==='700'?'#fff':'#e8eef6';let txt=String(t);while(g.measureText(txt).width>W-pad*3.2&&txt.length>4)txt=txt.slice(0,-2);if(txt!==String(t))txt=txt.slice(0,-1)+'…';g.fillText(txt,pad*2,y);y+=sz*1.35;}
  g.shadowBlur=0;g.font='700 '+1.05*u+'px system-ui,Arial';g.fillStyle='rgba(255,255,255,.85)';const marca='LBO Campo';g.fillText(marca,W-pad-g.measureText(marca).width,pad);
  return await new Promise((ok,err)=>c.toBlob(b=>b?ok(b):err(Error('Não foi possível gerar a foto.')),'image/jpeg',.85));}
+// ---------- V28.8: fotos em sequência. A câmera fica aberta na tela; o QR da sala escolhe o local; cada foto sai com o carimbo e vai direto para a fila ----------
+let cam=null,qrDet=null,qrTimer=null,seq=null;
+function pararCamera(){clearInterval(qrTimer);qrTimer=null;if(cam){cam.getTracks().forEach(t=>t.stop());cam=null;}const v=document.getElementById('seqV');if(v)v.srcObject=null;}
+function lerEtiqueta(txt){try{const u=new URL(String(txt||'').trim());const o=u.searchParams.get('o');if(!o)return null;return {o,l:u.searchParams.get('l')||'',a:u.searchParams.get('a')||''};}catch(e){return null;}}
+async function sequencia(lid,aid){pararCamera();$('#t').textContent=obra.nome;iniciarGps();const ls_=locais();
+ seq={l:ls_.some(x=>x.id===lid)?lid:'',a:aid||'',fotos:[],fila:Promise.resolve(),lendo:false,aviso:''};if(seq.l&&!ls_.find(x=>x.id===seq.l)?.ambientes?.some(x=>x.id===seq.a))seq.a='';
+ app.innerHTML='<button class="back" id="bk">‹ Fotos</button><div class="seq"><div class="seq-cam"><video id="seqV" playsinline muted autoplay></video><div class="seq-sala" id="seqSala"></div><div class="seq-alvo" id="seqAlvo" hidden></div></div>'+
+  '<div class="seq-bar"><button type="button" id="seqQR" class="seq-b">🔎 Ler QR</button><button type="button" id="seqFoto" class="seq-disp" aria-label="Tirar foto"></button><button type="button" id="seqFim" class="seq-b">Concluir</button></div>'+
+  '<div id="seqMsg"></div><div class="card"><label>Local</label><select id="sl"><option value="">Escolha ou leia o QR</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('')+'</select><label>Ambiente</label><select id="sa"></select>'+
+  '<label>Observação (opcional, vai no carimbo de todas)</label><input id="so" maxlength="120" placeholder="Ex.: antes da pintura"><p class="m" id="gpsTxt"></p></div>'+
+  '<div class="seq-cont" id="seqCont"></div><div class="seq-thumbs" id="seqTh"></div><input id="seqIn" type="file" accept="image/*" capture="environment" hidden></div>';
+ atualizarGpsTela();
+ const selAmb=()=>{const L=ls_.find(x=>x.id===seq.l);$('#sa').innerHTML='<option value="">'+(L?'Local inteiro':'—')+'</option>'+(L?.ambientes||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===seq.a?'selected':'')+'>'+esc(x.nome)+'</option>').join('');$('#sl').value=seq.l;};
+ selAmb();$('#sl').onchange=()=>{seq.l=$('#sl').value;seq.a='';selAmb();seqAtualizar();};$('#sa').onchange=()=>{seq.a=$('#sa').value;seqAtualizar();};
+ $('#bk').onclick=()=>fotos(seq.l,seq.a);$('#seqFim').onclick=()=>{pararCamera();fotos(seq.l,seq.a);if(seq.fotos.length)app.insertAdjacentHTML('afterbegin',msg('o',seq.fotos.length+' foto(s) desta sequência. As que estão na fila vão sozinhas quando houver internet.'));};
+ $('#seqQR').onclick=()=>{seq.lendo=true;seq.aviso='';seqAtualizar();lerQR();};
+ $('#seqFoto').onclick=()=>{if(!seq.l)return seqMsg('w','Leia o QR da sala ou escolha o local antes da foto.');if(cam)capturar();else $('#seqIn').click();};
+ $('#seqIn').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(f)processar(f);};
+ await abrirCamera();if(!seq.l&&cam){seq.lendo=true;lerQR();}seqAtualizar();}
+async function abrirCamera(){try{if(!navigator.mediaDevices?.getUserMedia)throw Error('sem câmera');
+  const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:2560},height:{ideal:1920}},audio:false});
+  if(!seq||!document.getElementById('seqV')){st.getTracks().forEach(t=>t.stop());return;}cam=st;const v=$('#seqV');v.hidden=false;v.srcObject=cam;await v.play().catch(()=>{});}
+ catch(e){cam=null;if($('#seqV'))$('#seqV').hidden=true;seqMsg('w','A câmera não abriu dentro do LBO Campo'+(e&&e.name==='NotAllowedError'?' (permissão negada)':'')+'. Cada toque no botão abre a câmera do celular; a foto volta para cá e vai direto para a fila.');}}
+// Ao sair do app a câmera é liberada; ao voltar para a sequência, abre de novo (as fotos tiradas continuam na lista).
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(cam){clearInterval(qrTimer);qrTimer=null;cam.getTracks().forEach(t=>t.stop());cam=null;}}else if(seq&&document.getElementById('seqV')&&!cam)abrirCamera().then(()=>{if(seq.lendo)lerQR();});});
+function seqMsg(c,t){const el=$('#seqMsg');if(el)el.innerHTML=t?msg(c,t):'';}
+function seqAtualizar(){if(!seq||!$('#seqSala'))return;const sala=nomeSala(seq.l,seq.a);
+ $('#seqSala').innerHTML=seq.lendo?'🔎 Aponte para o QR da sala…':sala?'📍 '+esc(sala):'Leia o QR ou escolha o local abaixo';$('#seqSala').classList.toggle('vazio',!sala||seq.lendo);$('#seqAlvo').hidden=!seq.lendo;
+ $('#seqFoto').disabled=!seq.l;const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
+ $('#seqCont').textContent=n?n+' foto'+(n===1?'':'s')+' · '+env+' enviada'+(env===1?'':'s')+(n-env-err>0?' · '+(n-env-err)+' na fila':'')+(err?' · '+err+' com erro':''):'';
+ $('#seqTh').innerHTML=seq.fotos.slice().reverse().map(f=>'<div class="seq-th"><img src="'+f.url+'" alt=""><span>'+(f.erro?'⚠':fotosEnviadas.has(f.filaId)?'✓':f.filaId?'⏳':'…')+'</span><small>'+esc(f.salaCurta)+'</small></div>').join('');}
+async function lerQR(){clearInterval(qrTimer);qrTimer=null;
+ if(!('BarcodeDetector' in window)){seq.lendo=false;seqAtualizar();return seqMsg('w','Este celular não lê o QR dentro do LBO Campo. Escolha o local e o ambiente na lista abaixo.');}
+ try{if(!qrDet)qrDet=new BarcodeDetector({formats:['qr_code']});}catch(e){seq.lendo=false;seqAtualizar();return seqMsg('w','Leitor de QR indisponível neste celular. Escolha o local na lista abaixo.');}
+ if(!cam){seq.lendo=false;seqAtualizar();return;}
+ let ocupado=false;const t0=Date.now();
+ qrTimer=setInterval(async()=>{if(ocupado||!seq||!seq.lendo)return;const v=document.getElementById('seqV');if(!v||v.readyState<2)return;ocupado=true;
+  try{const cods=await qrDet.detect(v);for(const c of cods){const k=lerEtiqueta(c.rawValue);if(!k)continue;
+    if(k.o!==obra.id){seqMsg('w','Esta etiqueta é de outra obra.');continue;}
+    if(!locais().some(x=>x.id===k.l)){seqMsg('w','A sala desta etiqueta não está no celular. No programa: Campo (celular) → Publicar.');continue;}
+    seq.l=k.l;seq.a=k.a;seq.lendo=false;clearInterval(qrTimer);qrTimer=null;try{navigator.vibrate?.(60);}catch(e){}
+    $('#sl').value=seq.l;$('#sl').onchange();seq.a=k.a;$('#sa').value=k.a;seqMsg('o','Sala lida: '+nomeSala(seq.l,seq.a)+'. Pode tirar as fotos.');seqAtualizar();break;}}
+  catch(e){}finally{ocupado=false;}
+  if(seq&&seq.lendo&&Date.now()-t0>45000){seq.lendo=false;clearInterval(qrTimer);qrTimer=null;seqMsg('w','Não encontrei o QR. Toque em "Ler QR" de novo ou escolha o local na lista.');seqAtualizar();}},350);}
+async function capturar(){const v=$('#seqV');if(!cam||!v)return;const bt=$('#seqFoto');bt.classList.add('clic');setTimeout(()=>bt.classList.remove('clic'),180);
+ let blob=null;const tr=cam.getVideoTracks()[0];
+ try{if(window.ImageCapture&&tr){blob=await new ImageCapture(tr).takePhoto();}}catch(e){blob=null;}
+ if(!blob){const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;if(!c.width)return seqMsg('w','A câmera ainda está abrindo. Tente de novo.');c.getContext('2d').drawImage(v,0,0);blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.92));}
+ processar(blob);}
+function processar(arquivo){if(!seq)return;const l=seq.l,a=seq.a,sala=nomeSala(l,a)||'Sem local',obs=$('#so')?.value.trim()||'',em=new Date(),gp=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null,end=gps.end;
+ const item={salaCurta:(locais().find(x=>x.id===l)?.ambientes?.find(x=>x.id===a)?.nome)||sala,url:'',filaId:'',erro:''};const lista=seq.fotos;lista.push(item);seqAtualizar();
+ seq.fila=seq.fila.then(async()=>{try{const blob=await carimbar(arquivo,{sala,obs});item.url=URL.createObjectURL(blob);
+   const f={blob,nome:nomeFoto(sala),l,a,sala,obs,gps:gp,end,em};await fotoParaFila(f);item.filaId=f.filaId;}catch(x){item.erro=x.message||'erro';seqMsg('e','Uma foto não foi guardada: '+item.erro);}
+  seqAtualizar();enviarFotos();});}
 function fila(){return ls.get('lboCampoFila',[]);}
 function mostrarFila(){const f=fila(),n=nFotosFila;$('#fila').hidden=!f.length&&!n;$('#filaTxt').textContent=[f.length?f.length+' registro(s)':'',n?n+' foto(s)':''].filter(Boolean).join(' e ')+' aguardando envio';}
 let enviando=false;
@@ -255,5 +322,13 @@ async function enviar(){if(enviando)return;const f=fila();if(!f.length){mostrarF
 $('#filaBtn').onclick=()=>Promise.all([enviar(),enviarFotos()]).then(()=>{if(obra&&pac&&!$('#cam'))servicos();});
 $('#sair').onclick=()=>{if((fila().length||nFotosFila)&&!confirm('Há registros ou fotos na fila. Sair mesmo assim? Eles continuam guardados neste celular.'))return;S=null;ls.set('lboCampoSessao',null);login();};
 window.addEventListener('online',()=>{enviar();enviarFotos();});setInterval(()=>{if(navigator.onLine){enviar();enviarFotos();}},60000);
+// App do Android (V28.7.1): avisa quando há APK novo na página de download.
+async function verApp(){const m=document.querySelector('meta[name="lbo-app"]')?.content||'';const [plat,ver]=m.split(' ');if(plat!=='android'||!ver||!navigator.onLine)return;
+ try{const r=await fetch('https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/versao.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();
+  const n=v=>String(v||'').split('.').map(x=>parseInt(x,10)||0),a=n(j.versao),b=n(ver);let maior=false;for(let i=0;i<3;i++){if(a[i]!==b[i]){maior=a[i]>b[i];break;}}
+  if(!maior||document.getElementById('appNovo'))return;const d=document.createElement('a');d.id='appNovo';d.href=j.pagina||j.url;d.target='_blank';d.rel='noopener';
+  d.style.cssText='display:block;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#f9731622;color:var(--fg);text-decoration:none;font-size:14px';
+  d.innerHTML='⬆ <b>Versão nova do app: '+esc(j.versao)+'</b> — toque para baixar e instalar por cima. Seus registros e fotos na fila continuam guardados.';app.parentNode.insertBefore(d,app);}catch(e){}}
+verApp();
 mostrarFila();contarFotos().then(n=>{if(n&&S&&navigator.onLine)enviarFotos();});if(S)obras();else login();
 </script></body></html>
