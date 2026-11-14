@@ -259,7 +259,7 @@ let avisoSalvar=false;
 async function salvarNoCelular(blob,nome){try{const FS=capPlugin('Filesystem');
   if(FS){await FS.writeFile({path:'Pictures/LBO Campo/'+nome,data:b64(await blob.arrayBuffer()),directory:'EXTERNAL_STORAGE',recursive:true});return true;}
   const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=nome;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);return true;}
- catch(e){if(!avisoSalvar){avisoSalvar=true;seqMsg('w','Não foi possível salvar no celular ('+(e.message||e)+'). As fotos continuam indo para o programa; use "Enviar ao Google Fotos".');}return false;}}
+ catch(e){if(!avisoSalvar){avisoSalvar=true;seqMsg('w','Não foi possível salvar no celular ('+(e.message||e)+'). As fotos continuam indo para o programa. Confira a permissão de armazenamento/fotos do LBO Campo nos ajustes do celular.');}return false;}}
 async function compartilharFotos(itens){itens=itens.filter(f=>f&&f.blob);if(!itens.length)throw Error('Nenhuma foto pronta para enviar.');
  const Sh=capPlugin('Share'),FS=capPlugin('Filesystem');
  if(Sh&&FS){const files=[];for(const f of itens){const r=await FS.writeFile({path:'lbo-compartilhar/'+f.nome,data:b64(await f.blob.arrayBuffer()),directory:'CACHE',recursive:true});files.push(r.uri);}await Sh.share({title:'Fotos da obra',files});return;}
@@ -268,7 +268,7 @@ async function compartilharFotos(itens){itens=itens.filter(f=>f&&f.blob);if(!ite
  throw Error('Este celular não compartilha arquivos por aqui. Ligue "Salvar cada foto no celular" (⚙) e ative o backup dessa pasta no Google Fotos.');}
 // ---------- Carimbo (V28.9): o que aparece é escolhido em "⚙ Carimbo" e fica guardado neste celular ----------
 const CARIMBO_PADRAO={sala:true,data:true,seg:false,obra:true,gps:true,prec:true,fmt:'dec',end:true,autor:true,obs:true,marca:true,texto:'',pos:'baixo',tam:'m',fundo:'degrade'};
-function cfgCarimbo(){const c=ls.get('lboCampoCarimbo',null);return {salvar:!!capPlugin('Filesystem'),...CARIMBO_PADRAO,...(c&&typeof c==='object'?c:{})};} // salvar no celular: ligado por padrão no app do Android
+function cfgCarimbo(){const c=ls.get('lboCampoCarimbo',null);return {salvar:true,...CARIMBO_PADRAO,...(c&&typeof c==='object'?c:{})};} // salvar no celular: ligado por padrão no app do Android
 function gms(v,pos,neg){const a=Math.abs(v),g=Math.floor(a),mm=(a-g)*60,m=Math.floor(mm),ss=(mm-m)*60;return g+'°'+String(m).padStart(2,'0')+"'"+ss.toFixed(1).padStart(4,'0')+'"'+(v<0?neg:pos);}
 function infoCarimbo(sala,obs,em){const p=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null;return {sala,obs:obs||'',em:em||new Date(),p,end:p?gps.end:'',obra:obra?.nome||'',autor:S?.user?.email||''};}
 function linhasCarimbo(i,c){const d=i.em,dt=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',c.seg?{hour:'2-digit',minute:'2-digit',second:'2-digit'}:{hour:'2-digit',minute:'2-digit'});
@@ -298,13 +298,13 @@ async function sequencia(lid,aid){pararCamera();$('#t').textContent=obra.nome;in
   '<div class="seq-bar"><button type="button" id="seqQR" class="seq-b">🔎 Ler QR</button><button type="button" id="seqFoto" class="seq-disp" aria-label="Tirar foto"></button><button type="button" id="seqFim" class="seq-b">Concluir</button></div>'+
   '<div id="seqMsg"></div><button type="button" class="seq-b seq-cfgb2" id="seqCfgB">⚙ Personalizar o carimbo</button><div class="card"><p class="m">A sala é opcional: leia o QR, escolha na lista ou fotografe direto.</p><label>Local</label><select id="sl"><option value="">Sem sala (só a foto)</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('')+'</select><label>Ambiente</label><select id="sa"></select>'+
   '<label>Observação (opcional, vai no carimbo de todas)</label><input id="so" maxlength="120" placeholder="Ex.: antes da pintura"><p class="m" id="gpsTxt"></p></div><div class="card seq-cfg" id="seqCfg" hidden></div>'+
-  '<div class="seq-cont" id="seqCont"></div><button type="button" class="seq-b seq-gf" id="seqGF" hidden>📤 Enviar ao Google Fotos / compartilhar</button><div class="seq-thumbs" id="seqTh"></div><input id="seqIn" type="file" accept="image/*" capture="environment" hidden></div><div class="seq-ver" id="seqVer" hidden></div>';
+  '<div class="seq-cont" id="seqCont"></div><div class="seq-thumbs" id="seqTh"></div><input id="seqIn" type="file" accept="image/*" capture="environment" hidden></div><div class="seq-ver" id="seqVer" hidden></div>';
  atualizarGpsTela();
  const selAmb=()=>{const L=ls_.find(x=>x.id===seq.l);$('#sa').innerHTML='<option value="">'+(L?'Local inteiro':'—')+'</option>'+(L?.ambientes||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===seq.a?'selected':'')+'>'+esc(x.nome)+'</option>').join('');$('#sl').value=seq.l;};
  selAmb();$('#sl').onchange=()=>{seq.l=$('#sl').value;seq.a='';selAmb();seqAtualizar();};$('#sa').onchange=()=>{seq.a=$('#sa').value;seqAtualizar();};
  $('#bk').onclick=servicos;$('#seqFim').onclick=()=>{const n=seq.fotos.length;pararCamera();servicos();if(n)app.insertAdjacentHTML('afterbegin',msg('o',n+' foto(s) tirada(s). As que estão na fila vão sozinhas quando houver internet.'));};
  $('#so').oninput=desenharOv;
- $('#seqGF').onclick=async()=>{const novas=seq.fotos.filter(f=>f.blob&&!f.compartilhada),lista=novas.length?novas:seq.fotos;try{await compartilharFotos(lista);lista.forEach(f=>f.compartilhada=true);seqMsg('o','Escolha o Google Fotos (ou outro app) para guardar as '+lista.length+' foto(s). O LBO reconhece sala e data quando você importar do Google Fotos.');}catch(e){if(e.name!=='AbortError')seqMsg('w',e.message);}seqAtualizar();};$('#seqCfgB').onclick=()=>{const el=$('#seqCfg');el.hidden=!el.hidden;if(!el.hidden){montarCfg();el.scrollIntoView({behavior:'smooth',block:'nearest'});}};
+$('#seqCfgB').onclick=()=>{const el=$('#seqCfg');el.hidden=!el.hidden;if(!el.hidden){montarCfg();el.scrollIntoView({behavior:'smooth',block:'nearest'});}};
  $('#seqTh').onclick=e=>{const t=e.target.closest('[data-i]');if(t)verFoto(+t.dataset.i);};
  $('#seqQR').onclick=()=>{if(seq.lendo){seq.lendo=false;clearInterval(qrTimer);qrTimer=null;seqAtualizar();return;}seq.lendo=true;seq.aviso='';seqAtualizar();lerQR();};
  $('#seqFoto').onclick=()=>{if(seq.lendo){seq.lendo=false;clearInterval(qrTimer);qrTimer=null;seqMsg('','');seqAtualizar();}if(cam)capturar();else $('#seqIn').click();};
@@ -319,15 +319,15 @@ function desenharOv(){const cv=$('#seqOv');if(!cv||!seq)return;const dpr=Math.mi
  const g=cv.getContext('2d');g.clearRect(0,0,w,h);desenharCarimbo(g,w,h,infoCarimbo(nomeSala(seq.l,seq.a)||'',$('#so')?.value.trim()||''),cfgCarimbo());}
 function montarCfg(){const c=cfgCarimbo(),el=$('#seqCfg');const ck=(k,t)=>'<label class="seq-ck"><input type="checkbox" data-k="'+k+'" '+(c[k]?'checked':'')+'> '+t+'</label>';
  const sel=(k,t,ops)=>'<label>'+t+'</label><select data-k="'+k+'">'+ops.map(([v,n])=>'<option value="'+v+'" '+(c[k]===v?'selected':'')+'>'+n+'</option>').join('')+'</select>';
- el.innerHTML='<h2>⚙ Carimbo da foto</h2><p class="m">Escolha o que aparece. Vale para as próximas fotos deste celular e já aparece na câmera.</p>'+ck('salvar','Salvar cada foto no celular (Imagens › LBO Campo no app; Downloads no navegador)')+'<div class="seq-cks">'+ck('sala','Local / ambiente')+ck('data','Data e hora')+ck('seg','Segundos')+ck('obra','Nome da obra')+ck('gps','Coordenadas GPS')+ck('prec','Precisão do GPS')+ck('end','Endereço')+ck('autor','Quem tirou (e-mail)')+ck('obs','Observação')+ck('marca','Marca "LBO Campo"')+'</div>'+
+ el.innerHTML='<h2>⚙ Carimbo da foto</h2><p class="m">Escolha o que aparece. Vale para as próximas fotos deste celular e já aparece na câmera.</p>'+ck('salvar','Salvar cada foto na galeria do celular (álbum LBO Campo no app; Downloads no navegador)')+'<div class="seq-cks">'+ck('sala','Local / ambiente')+ck('data','Data e hora')+ck('seg','Segundos')+ck('obra','Nome da obra')+ck('gps','Coordenadas GPS')+ck('prec','Precisão do GPS')+ck('end','Endereço')+ck('autor','Quem tirou (e-mail)')+ck('obs','Observação')+ck('marca','Marca "LBO Campo"')+'</div>'+
   sel('fmt','Formato das coordenadas',[['dec','Decimal (-6.851234, -35.489111)'],['gms','Graus, minutos e segundos']])+sel('pos','Posição',[['baixo','Embaixo'],['topo','Em cima']])+sel('tam','Tamanho do texto',[['p','Pequeno'],['m','Médio'],['g','Grande']])+sel('fundo','Fundo',[['degrade','Sombreado'],['faixa','Faixa escura'],['nenhum','Sem fundo']])+
   '<label>Texto fixo (opcional)</label><input data-k="texto" maxlength="80" value="'+esc(c.texto)+'" placeholder="Ex.: Acrópoles Engenharia · Fiscalização"><button type="button" class="seq-b" id="cfgPadrao" style="margin-top:12px;width:100%">Voltar ao padrão</button>';
  const salvar=()=>{const n={...cfgCarimbo()};el.querySelectorAll('[data-k]').forEach(i=>{n[i.dataset.k]=i.type==='checkbox'?i.checked:i.value;});ls.set('lboCampoCarimbo',n);desenharOv();};
  el.onchange=salvar;el.oninput=e=>{if(e.target.dataset.k==='texto')salvar();};$('#cfgPadrao').onclick=()=>{ls.set('lboCampoCarimbo',null);montarCfg();desenharOv();};}
 function verFoto(i){const f=seq?.fotos[i];if(!f?.blob)return;const el=$('#seqVer');el.hidden=false;
- el.innerHTML='<div class="seq-ver-in"><img src="'+f.url+'" alt=""><div class="seq-bar2"><button type="button" class="seq-b" id="verShare">💾 Salvar / compartilhar</button><button type="button" class="seq-b" id="verX">Fechar</button></div></div>';
+ el.innerHTML='<div class="seq-ver-in"><img src="'+f.url+'" alt=""><div class="seq-bar2"><button type="button" class="seq-b" id="verShare">💾 Salvar na galeria</button><button type="button" class="seq-b" id="verX">Fechar</button></div></div>';
  $('#verX').onclick=()=>{el.hidden=true;el.innerHTML='';};
- $('#verShare').onclick=async()=>{try{await compartilharFotos([f]);f.compartilhada=true;}catch(e){if(e.name==='AbortError')return;if(!(await salvarNoCelular(f.blob,f.nome)))seqMsg('w',e.message);}};}
+ $('#verShare').onclick=async()=>{const ok=await salvarNoCelular(f.blob,f.nome);if(ok){f.salva=true;$('#verShare').textContent='✓ Salva na galeria';seqAtualizar();}};}
 async function abrirCamera(){try{if(!navigator.mediaDevices?.getUserMedia)throw Error('sem câmera');
   const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:2560},height:{ideal:1920}},audio:false});
   if(!seq||!document.getElementById('seqV')){st.getTracks().forEach(t=>t.stop());return;}cam=st;const v=$('#seqV');v.hidden=false;v.srcObject=cam;await v.play().catch(()=>{});}
@@ -337,8 +337,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){if(cam){cl
 function seqMsg(c,t){const el=$('#seqMsg');if(el)el.innerHTML=t?msg(c,t):'';}
 function seqAtualizar(){if(!seq||!$('#seqSala'))return;const sala=nomeSala(seq.l,seq.a);
  $('#seqSala').innerHTML='🔎 Aponte para o QR da sala… (ou toque no botão laranja para fotografar sem sala)';$('#seqSala').hidden=!seq.lendo;$('#seqQR').textContent=seq.lendo?'✕ Cancelar QR':sala?'🔎 Trocar sala (QR)':'🔎 Ler QR da sala';$('#seqSala').classList.toggle('vazio',true);desenharOv();$('#seqAlvo').hidden=!seq.lendo;
- $('#seqFoto').disabled=false;const gf=$('#seqGF'),nb=seq.fotos.filter(f=>f.blob).length,nn=seq.fotos.filter(f=>f.blob&&!f.compartilhada).length;gf.hidden=!nb;gf.textContent='📤 Enviar ao Google Fotos / compartilhar ('+(nn||nb)+')';const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
- $('#seqCont').textContent=n?n+' foto'+(n===1?'':'s')+' · '+env+' enviada'+(env===1?'':'s')+(n-env-err>0?' · '+(n-env-err)+' na fila':'')+(err?' · '+err+' com erro':''):'';
+ $('#seqFoto').disabled=false;const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
+ $('#seqCont').textContent=n?n+' foto'+(n===1?'':'s')+' · '+env+' enviada'+(env===1?'':'s')+(n-env-err>0?' · '+(n-env-err)+' na fila':'')+(err?' · '+err+' com erro':'')+(seq.fotos.some(f=>f.salva)?' · '+seq.fotos.filter(f=>f.salva).length+' na galeria':''):'';
  $('#seqTh').innerHTML=seq.fotos.map((f,i)=>[f,i]).reverse().map(([f,i])=>'<div class="seq-th" data-i="'+i+'"><img src="'+f.url+'" alt=""><span>'+(f.erro?'⚠':fotosEnviadas.has(f.filaId)?'✓':f.filaId?'⏳':'…')+'</span><small>'+esc(f.salaCurta)+'</small></div>').join('');}
 async function lerQR(){clearInterval(qrTimer);qrTimer=null;
  if(!('BarcodeDetector' in window)){seq.lendo=false;seqAtualizar();return seqMsg('w','Este celular não lê o QR dentro do LBO Campo. Escolha o local e o ambiente na lista abaixo.');}
