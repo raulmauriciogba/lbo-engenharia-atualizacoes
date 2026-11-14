@@ -31,8 +31,11 @@ button.add{margin-top:10px;padding:10px 14px;border:1px dashed var(--bd);border-
 .tag{font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--bd);color:var(--mut);white-space:nowrap}
 .sub{border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:10px}.sub-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.sub-h span{color:var(--mut);font-size:13px}.sub .quick{grid-template-columns:repeat(5,1fr)}.quick button.on{background:var(--ac,#2563eb);border-color:var(--ac,#2563eb);color:#fff}.sub [data-sv]{margin-top:8px}
 
-.seq-cam{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4;max-height:62vh;margin:0 auto}.seq-cam video{width:100%;height:100%;object-fit:cover;display:block}
-.seq-sala{position:absolute;left:10px;right:10px;top:10px;padding:8px 12px;border-radius:10px;background:#000000a8;color:#fff;font-weight:700;font-size:15px}.seq-sala.vazio{font-weight:600;color:#ffd7b8}
+.seq-cam{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4;width:min(100%,calc(64vh * .75));margin:0 auto}.seq-cam video{width:100%;height:100%;object-fit:fill;display:block}.seq-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.seq-cfgb2{width:100%;margin:0 0 12px}.seq-gf{width:100%;margin:0 0 10px}.seq-gf[hidden]{display:none}
+.seq-cks{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}.seq-ck{display:flex!important;gap:8px;align-items:center;font-weight:500!important;color:var(--fg)!important;margin:6px 0!important}.seq-ck input{width:20px;height:20px}
+.seq-ver[hidden],.seq-sala[hidden]{display:none!important}.seq-ver{position:fixed;inset:0;z-index:20;background:#000000e0;display:flex;align-items:center;justify-content:center;padding:16px}.seq-ver-in{max-width:640px;width:100%}.seq-ver img{width:100%;border-radius:10px}.seq-bar2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.seq-sala{position:absolute;left:10px;right:10px;top:36%;text-align:center;padding:8px 12px;border-radius:10px;background:#000000a8;color:#fff;font-weight:700;font-size:15px}.seq-sala.vazio{font-weight:600;color:#ffd7b8}
 .seq-alvo{position:absolute;left:50%;top:50%;width:55%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #f97316;border-radius:16px;box-shadow:0 0 0 999px #00000040}
 .seq-bar{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:12px 0}.seq-b{padding:12px 8px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit;font-weight:600}
 .seq-disp{width:76px;height:76px;border-radius:50%;border:5px solid var(--card);background:#f97316;box-shadow:0 0 0 3px #f97316}.seq-disp:disabled{opacity:.4}.seq-disp.clic{transform:scale(.9)}
@@ -130,7 +133,7 @@ function pctSubs(s,u){let W=0,A=0;for(const x of s.subs||[]){if(x.pct[u-1]===nul
 // V28.8: primeiro o local (pavimento/setor), depois os serviços daquele local.
 function pctServ(s,u){const q=+s.dist[u-1]||0;if(!(q>0))return null;return temSubs(s,u)?pctSubs(s,u):Math.min(100,ultimo(s.id,u).qtd/q*100);}
 function servicos(){pararCamera();$('#t').textContent=obra.nome;
- const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="fotoBtn" class="ef"><span><b>📷 Fotos do ambiente</b><small>Uma foto ou várias em sequência, com o QR da sala · carimbo com sala, data, GPS e endereço'+(locais().length?'':' · cadastre os ambientes no programa')+'</small></span>›</button><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Locais</h2><p class="m">Escolha o local para ver e atualizar os serviços dele.</p><div class="list">'+(pac.setores||[]).map((n,i)=>{const u=i+1,ps=pac.servicos.map(s=>pctServ(s,u)).filter(v=>v!==null);if(!ps.length)return '';
+ const ef=efUltimo();app.innerHTML='<button class="back" onclick="obras()">‹ Obras</button><div class="list"><button id="fotoBtn" class="ef"><span><b>📷 Câmera da obra</b><small>Carimbo ao vivo com local, data, GPS e endereço · lê o QR da sala · várias fotos seguidas'+(locais().length?'':' · cadastre os ambientes no programa')+'</small></span>›</button><button id="efBtn" class="ef"><span><b>👷 Efetivo do dia</b><small>'+(ef?'Último: '+esc(ef.total+' pessoa'+(ef.total===1?'':'s')+' em '+ef.data.split('-').reverse().join('/'))+(ef.fila?' (na fila)':''):'Quantas pessoas trabalharam hoje, por função')+'</small></span>›</button></div><h2>Locais</h2><p class="m">Escolha o local para ver e atualizar os serviços dele.</p><div class="list">'+(pac.setores||[]).map((n,i)=>{const u=i+1,ps=pac.servicos.map(s=>pctServ(s,u)).filter(v=>v!==null);if(!ps.length)return '';
   const p=ps.reduce((a,b)=>a+b,0)/ps.length,fin=ps.filter(v=>v>=99.95).length,nf=fila().filter(r=>r.obra_id===obra.id&&r.setor===u&&r.servico_id!==EF).length;
   return '<button data-u="'+u+'"><span><b>'+esc(n)+'</b><small>'+ps.length+' serviço'+(ps.length===1?'':'s')+(fin?' · '+fin+' concluído'+(fin===1?'':'s'):'')+'</small><div class="bar"><i style="width:'+p.toFixed(1)+'%"></i></div></span>'+(nf?'<span class="tag">'+nf+' na fila</span>':'')+'<span class="pct">'+p.toFixed(0)+'%</span></button>';}).join('')+'</div>';
  app.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>localServicos(+b.dataset.u));$('#efBtn').onclick=()=>efetivo();$('#fotoBtn').onclick=()=>fotos('','');}
@@ -194,28 +197,8 @@ async function endereco(){const p=gps.pos;if(!p||!navigator.onLine)return;const 
 function atualizarGpsTela(){const el=$('#gpsTxt');if(!el)return;el.innerHTML=gps.pos?('📍 '+gps.pos.lat.toFixed(6)+', '+gps.pos.lon.toFixed(6)+' (±'+gps.pos.prec+' m)'+(gps.end?'<br>'+esc(gps.end):'')):(gps.erro?'<span style="color:var(--warn)">'+esc(gps.erro)+'</span>':'Obtendo a localização…');}
 const locais=()=>Array.isArray(pac?.locais)?pac.locais:[];
 function nomeSala(l,a){const L=locais().find(x=>x.id===l),A=L?.ambientes?.find(x=>x.id===a);return L?(L.nome+(A?' › '+A.nome:'')):'';}
-function fotos(lid,aid,aviso){pararCamera();$('#t').textContent=obra.nome;iniciarGps();const ls_=locais();if(lid&&!ls_.some(x=>x.id===lid))aviso=aviso||'A sala da etiqueta não está no pacote do celular. No programa, publique de novo (Campo → Publicar).';
- const L=ls_.find(x=>x.id===lid)||null;
- app.innerHTML='<button class="back" id="bk">‹ Locais</button><button class="p" id="seqBtn" style="margin:0 0 12px">📸 Fotos em sequência · ler o QR da sala</button><div class="card"><h2>📷 Uma foto</h2>'+(aviso?msg('w',aviso):'')+
-  (ls_.length?'<label>Local</label><select id="fl">'+'<option value="">Escolha o local</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===lid?'selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'+
-  '<label>Ambiente</label><select id="fa"><option value="">'+(L?'Local inteiro':'—')+'</option>'+(L?.ambientes||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===aid?'selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'
-   :'<p class="m">Nenhum local cadastrado. No programa: Campo (celular) → Ambientes e QR, e depois Publicar.</p>')+
-  '<label>Observação (opcional, vai no carimbo)</label><input id="fo" maxlength="120" placeholder="Ex.: infiltração no forro"><p class="m" id="gpsTxt"></p>'+
-  '<label class="p cam" id="camBtn">📷 Tirar foto<input id="cam" type="file" accept="image/*" capture="environment" hidden></label></div><div id="prev"></div>';
- atualizarGpsTela();$('#bk').onclick=servicos;$('#seqBtn').onclick=()=>sequencia($('#fl')?.value||lid||'',$('#fa')?.value||aid||'');
- const fl=$('#fl');if(fl)fl.onchange=()=>fotos(fl.value,'');
- $('#cam').onchange=async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;const l=$('#fl')?.value||'',a=$('#fa')?.value||'';$('#prev').innerHTML='<p class="m">Preparando a foto…</p>';
-  try{const blob=await carimbar(f,{sala:nomeSala(l,a)||'Sem local',obs:$('#fo').value.trim()});const nome='LBO_'+(nomeSala(l,a)||'foto').replace(/[^\wÀ-ú›-]+/g,'_').replace(/›/g,'-').slice(0,60)+'_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')+'.jpg';
-   const gp=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null;fotoAtual={blob,nome,url:URL.createObjectURL(blob),l,a,sala:nomeSala(l,a)||'Sem local',obs:$('#fo').value.trim(),gps:gp,end:gps.end,em:new Date()};mostrarFoto();}catch(x){$('#prev').innerHTML=msg('e',x.message);}};}
-function mostrarFoto(){const f=fotoAtual;if(!f)return;$('#prev').innerHTML='<div class="card"><img src="'+f.url+'" alt="" style="width:100%;border-radius:10px"><button class="p" id="enviarFoto">📤 Enviar para o programa</button><div id="fotoSt"></div><button class="p sec" id="salvar">💾 Salvar / compartilhar no celular</button><p class="m">A foto fica com o carimbo da sala, data, GPS e endereço. Enviada, ela aparece no programa em Campo (celular) → Buscar fotos e entra no Relatório Fotográfico da obra.</p></div>';
- $('#enviarFoto').onclick=async()=>{const b=$('#enviarFoto');b.disabled=true;$('#fotoSt').innerHTML='<p class="m">Preparando o envio…</p>';
-  try{await fotoParaFila(f);f.naFila=true;b.textContent='✓ Na fila de envio';const r=await enviarFotos();
-   $('#fotoSt').innerHTML=f.enviada?msg('o','Foto enviada para o programa.'):msg('w',r&&r.erro?r.erro+' A foto ficou guardada neste celular e vai sozinha quando der.':'Sem sinal agora: a foto ficou guardada neste celular e vai sozinha quando tiver internet.');
-   if(f.enviada)b.textContent='✓ Enviada';}
-  catch(x){b.disabled=false;$('#fotoSt').innerHTML=msg('e',x.message);}};
- $('#salvar').onclick=async()=>{const file=new File([f.blob],f.nome,{type:'image/jpeg'});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:f.sala});return;}catch(e){if(e.name==='AbortError')return;}}
-  const a=document.createElement('a');a.href=f.url;a.download=f.nome;document.body.append(a);a.click();a.remove();};}
+// V28.9: as fotos usam a câmera do próprio LBO Campo (carimbo ao vivo na tela, configurável). A câmera do celular só entra se esta não abrir.
+function fotos(lid,aid){sequencia(lid||'',aid||'');}
 // ---------- Envio das fotos ao programa (V28.5): fila no próprio celular (IndexedDB) e passagem temporária pelo Firebase ----------
 // A foto vai reduzida (até 1600 px, ~200-500 KB) e fica na nuvem só até o programa importar: o programa grava no .lbo e apaga da nuvem.
 const FOTO_MAX_B64=900000;
@@ -230,8 +213,9 @@ async function reduzir(blob){let img=await createImageBitmap(blob);const tent=[[
  for(const [lado,q] of tent){const k=Math.min(1,lado/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
   const b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',q));const s=b64(await b.arrayBuffer());if(s.length<=FOTO_MAX_B64)return {jpg:s,w:c.width,h:c.height};}
  throw Error('A foto ficou grande demais para o envio leve.');}
+function novoIdFoto(){return 'f'+String(S?.user?.id||'').replace(/[^A-Za-z0-9]/g,'').slice(0,8)+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 async function fotoParaFila(f){if(f.naFila)return;if(!obra?.id)throw Error('Abra a obra antes de enviar.');const r=await reduzir(f.blob),agora=new Date(),p=f.gps||null;
- const id='f'+String(S.user.id).replace(/[^A-Za-z0-9]/g,'').slice(0,8)+'_'+agora.getTime().toString(36)+Math.random().toString(36).slice(2,6);
+ const id=f.id||novoIdFoto();
  await filaFotos.add({id,obra_id:obra.id,obra_nome:obra.nome,local_id:f.l||'',amb_id:f.a||'',sala:f.sala||'Sem local',obs:f.obs||'',data:hoje(),tirada_em:(f.em||agora).toISOString(),
   lat:p?p.lat:null,lon:p?p.lon:null,prec:p?p.prec:null,endereco:p&&f.end?f.end:'',nome:f.nome,largura:r.w,altura:r.h,kb:Math.round(r.jpg.length*3/4/1024),jpg:r.jpg});
  f.filaId=id;await contarFotos();}
@@ -245,38 +229,105 @@ async function enviarFotos(){if(enviandoFotos||!S)return null;enviandoFotos=true
  try{seqAtualizar();}catch(e){}
  if(fotoAtual&&fotoAtual.enviada&&$('#enviarFoto')){$('#enviarFoto').textContent='✓ Enviada';$('#fotoSt').innerHTML=msg('o','Foto enviada para o programa.');}
  return {enviadas,erro};}
-function nomeFoto(sala){return 'LBO_'+(sala||'foto').replace(/[^\wÀ-ú›-]+/g,'_').replace(/›/g,'-').slice(0,60)+'_'+new Date().toISOString().slice(0,19).replace(/[-:T]/g,'')+'.jpg';}
-async function carimbar(file,{sala,obs}){let img;try{img=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){img=await new Promise((ok,err)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>err(Error('Não foi possível ler a foto.'));i.src=URL.createObjectURL(file);});}
+function nomeFoto(sala,em){const d=em||new Date(),z=n=>String(n).padStart(2,'0');return 'LBO_'+(sala||'foto').replace(/›/g,'-').replace(/[^\wÀ-ú-]+/g,'_').replace(/_+/g,'_').slice(0,60)+'_'+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds())+'.jpg';}
+// V28.9: informações da foto gravadas no próprio arquivo (EXIF): o LBO reconhece a foto mesmo quando ela chega pelo Google Fotos.
+function exifData(d){const z=n=>String(n).padStart(2,'0');return d.getFullYear()+':'+z(d.getMonth()+1)+':'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds());}
+async function comExif(blob,m){const src=new Uint8Array(await blob.arrayBuffer());if(src[0]!==0xFF||src[1]!==0xD8)return blob;
+ const asc=t=>{const b=[];for(const ch of String(t))b.push(ch.charCodeAt(0)<128?ch.charCodeAt(0):63);b.push(0);return b;};
+ const desc=JSON.stringify({lbo:'campo',v:1,...m}).replace(/[\u0080-￿]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
+ const dt=exifData(m.em?new Date(m.em):new Date());const temGps=Number.isFinite(m.lat)&&Number.isFinite(m.lon);
+ const rac=v=>{const a=Math.abs(v),g=Math.floor(a),mm=(a-g)*60,mi=Math.floor(mm),ss=Math.round((mm-mi)*60*10000);return [[g,1],[mi,1],[ss,10000]];};
+ // TIFF little-endian; cada IFD: [tag,tipo,qtd,valor(bytes ou número)]
+ const ifds={zero:[[0x010E,2,asc(desc)],[0x0132,2,asc(dt)],[0x8769,4,'exif'],...(temGps?[[0x8825,4,'gps']]:[])],exif:[[0x9003,2,asc(dt)],[0x9004,2,asc(dt)]],
+  gps:temGps?[[0x0000,1,[2,3,0,0]],[0x0001,2,asc(m.lat<0?'S':'N')],[0x0002,5,rac(m.lat)],[0x0003,2,asc(m.lon<0?'W':'E')],[0x0004,5,rac(m.lon)]]:[]};
+ const ordem=['zero','exif',...(temGps?['gps']:[])],tam=k=>2+ifds[k].length*12+4;const pos={};let off=8;for(const k of ordem){pos[k]=off;off+=tam(k);}
+ let dataOff=off;const extra=[];const W=[];const u16=v=>W.push(v&255,(v>>8)&255),u32=v=>W.push(v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255);
+ W.push(0x49,0x49,0x2A,0x00);u32(8);
+ for(const k of ordem){u16(ifds[k].length);for(const [tag,tipo,val] of ifds[k]){u16(tag);u16(tipo);
+   if(val==='exif'||val==='gps'){u32(1);u32(pos[val]);continue;}
+   if(tipo===5){u32(val.length);u32(dataOff);for(const [n,d] of val){extra.push(n,d);}dataOff+=val.length*8;continue;}
+   const bytes=val;u32(bytes.length);if(bytes.length<=4){const b=[...bytes,0,0,0,0].slice(0,4);W.push(...b);}else{u32(dataOff);extra.push(bytes);dataOff+=bytes.length+(bytes.length&1);}}
+  u32(0);}
+ for(const e of extra){if(Array.isArray(e)){W.push(...e,...(e.length&1?[0]:[]));}else{u32(e);}}
+ // (extra mistura listas de bytes e números de racionais, na ordem em que os deslocamentos foram reservados)
+ const tiff=new Uint8Array(W),hdr=[0x45,0x78,0x69,0x66,0,0],len=2+hdr.length+tiff.length;if(len>65535)return blob;
+ const app1=new Uint8Array(4+hdr.length+tiff.length);app1.set([0xFF,0xE1,len>>8,len&255]);app1.set(hdr,4);app1.set(tiff,4+hdr.length);
+ return new Blob([src.subarray(0,2),app1,src.subarray(2)],{type:'image/jpeg'});}
+// Salvar no celular: no app do Android, na pasta Imagens/LBO Campo (o Google Fotos pode fazer backup dela); no navegador, vai para Downloads.
+function capPlugin(n){const C=window.Capacitor;if(!C||!(C.isNativePlatform?C.isNativePlatform():C.platform&&C.platform!=='web'))return null;return C.Plugins?.[n]||null;}
+let avisoSalvar=false;
+async function salvarNoCelular(blob,nome){try{const FS=capPlugin('Filesystem');
+  if(FS){await FS.writeFile({path:'Pictures/LBO Campo/'+nome,data:b64(await blob.arrayBuffer()),directory:'EXTERNAL_STORAGE',recursive:true});return true;}
+  const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=nome;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);return true;}
+ catch(e){if(!avisoSalvar){avisoSalvar=true;seqMsg('w','Não foi possível salvar no celular ('+(e.message||e)+'). As fotos continuam indo para o programa; use "Enviar ao Google Fotos".');}return false;}}
+async function compartilharFotos(itens){itens=itens.filter(f=>f&&f.blob);if(!itens.length)throw Error('Nenhuma foto pronta para enviar.');
+ const Sh=capPlugin('Share'),FS=capPlugin('Filesystem');
+ if(Sh&&FS){const files=[];for(const f of itens){const r=await FS.writeFile({path:'lbo-compartilhar/'+f.nome,data:b64(await f.blob.arrayBuffer()),directory:'CACHE',recursive:true});files.push(r.uri);}await Sh.share({title:'Fotos da obra',files});return;}
+ const files=itens.map(f=>new File([f.blob],f.nome,{type:'image/jpeg'}));
+ if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title:'Fotos da obra'});return;}
+ throw Error('Este celular não compartilha arquivos por aqui. Ligue "Salvar cada foto no celular" (⚙) e ative o backup dessa pasta no Google Fotos.');}
+// ---------- Carimbo (V28.9): o que aparece é escolhido em "⚙ Carimbo" e fica guardado neste celular ----------
+const CARIMBO_PADRAO={sala:true,data:true,seg:false,obra:true,gps:true,prec:true,fmt:'dec',end:true,autor:true,obs:true,marca:true,texto:'',pos:'baixo',tam:'m',fundo:'degrade'};
+function cfgCarimbo(){const c=ls.get('lboCampoCarimbo',null);return {salvar:!!capPlugin('Filesystem'),...CARIMBO_PADRAO,...(c&&typeof c==='object'?c:{})};} // salvar no celular: ligado por padrão no app do Android
+function gms(v,pos,neg){const a=Math.abs(v),g=Math.floor(a),mm=(a-g)*60,m=Math.floor(mm),ss=(mm-m)*60;return g+'°'+String(m).padStart(2,'0')+"'"+ss.toFixed(1).padStart(4,'0')+'"'+(v<0?neg:pos);}
+function infoCarimbo(sala,obs,em){const p=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null;return {sala,obs:obs||'',em:em||new Date(),p,end:p?gps.end:'',obra:obra?.nome||'',autor:S?.user?.email||''};}
+function linhasCarimbo(i,c){const d=i.em,dt=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',c.seg?{hour:'2-digit',minute:'2-digit',second:'2-digit'}:{hour:'2-digit',minute:'2-digit'});
+ const co=i.p?(c.fmt==='gms'?gms(i.p.lat,'N','S')+' '+gms(i.p.lon,'L','O'):i.p.lat.toFixed(6)+', '+i.p.lon.toFixed(6))+(c.prec?' (±'+i.p.prec+' m)':''):'GPS indisponível';
+ return [c.sala&&[i.sala,1.9,'700'],(c.data||c.obra)&&[[c.data?dt:'',c.obra?i.obra:''].filter(Boolean).join(' · '),1.25,'600'],c.gps&&['📍 '+co,1.1,'400'],c.end&&i.end&&[i.end,1.1,'400'],
+  (c.autor&&i.autor||c.obs&&i.obs)&&[[c.autor?i.autor:'',c.obs?i.obs:''].filter(Boolean).join(' · '),1.1,'400'],c.texto&&[String(c.texto).slice(0,80),1.1,'600']].filter(x=>x&&x[0]);}
+function desenharCarimbo(g,W,H,i,c){const u=Math.max(W,H)/100*({p:.9,m:1.2,g:1.55}[c.tam]||1.2),ls_=linhasCarimbo(i,c),pad=1.4*u,topo=c.pos==='topo';
+ const alt=ls_.length?pad*2+ls_.reduce((a,l)=>a+l[1]*u*1.35,0):0;
+ if(ls_.length){if(c.fundo==='degrade'){const y0=topo?0:H-alt-3*u,y1=topo?alt+3*u:H,gr=g.createLinearGradient(0,y0,0,y1);const a=[[0,'rgba(0,0,0,0)'],[.25,'rgba(0,0,0,.55)'],[1,'rgba(0,0,0,.78)']];(topo?a.map(([o,cl])=>[1-o,cl]):a).forEach(([o,cl])=>gr.addColorStop(o,cl));g.fillStyle=gr;g.fillRect(0,y0,W,alt+3*u);}
+  else if(c.fundo==='faixa'){g.fillStyle='rgba(0,0,0,.6)';g.fillRect(0,topo?0:H-alt,W,alt);}
+  const yb=topo?0:H-alt;g.fillStyle='#f97316';g.fillRect(pad,yb+pad*.8,.45*u,alt-pad*1.6);
+  let y=yb+pad;g.textBaseline='top';g.shadowColor='rgba(0,0,0,.75)';g.shadowBlur=u*.35;
+  for(const [t,f,w] of ls_){const sz=f*u;g.font=w+' '+sz+'px system-ui,-apple-system,Segoe UI,Roboto,Arial';g.fillStyle=w==='700'?'#fff':'#e8eef6';let txt=String(t);while(g.measureText(txt).width>W-pad*3.2&&txt.length>4)txt=txt.slice(0,-2);if(txt!==String(t))txt=txt.slice(0,-1)+'…';g.fillText(txt,pad*2,y);y+=sz*1.35;}}
+ if(c.marca){g.shadowBlur=u*.3;g.font='700 '+1.05*u+'px system-ui,Arial';g.fillStyle='rgba(255,255,255,.85)';g.textBaseline='top';const m='LBO Campo';g.fillText(m,W-pad-g.measureText(m).width,topo?H-pad-1.2*u:pad);}
+ g.shadowBlur=0;}
+async function carimbar(file,info){let img;try{img=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){img=await new Promise((ok,err)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>err(Error('Não foi possível ler a foto.'));i.src=URL.createObjectURL(file);});}
  const W0=img.width,H0=img.height,k=Math.min(1,2048/Math.max(W0,H0)),W=Math.round(W0*k),H=Math.round(H0*k),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(img,0,0,W,H);
- const d=new Date(),p=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null,u=Math.max(W,H)/100;
- const linhas=[[sala,1.9*u,'700'],[d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+obra.nome,1.25*u,'600'],
-  [p?('GPS '+p.lat.toFixed(6)+', '+p.lon.toFixed(6)+' (±'+p.prec+' m)'):'GPS indisponível',1.1*u,'400'],...(gps.end&&p?[[gps.end,1.1*u,'400']]:[]),[(S?.user?.email||'')+(obs?' · '+obs:''),1.1*u,'400']].filter(x=>x[0]);
- const pad=1.4*u,lh=l=>l[1]*1.35;let alt=pad*2+linhas.reduce((a,l)=>a+lh(l),0);
- const grad=g.createLinearGradient(0,H-alt-3*u,0,H);grad.addColorStop(0,'rgba(0,0,0,0)');grad.addColorStop(.25,'rgba(0,0,0,.55)');grad.addColorStop(1,'rgba(0,0,0,.78)');g.fillStyle=grad;g.fillRect(0,H-alt-3*u,W,alt+3*u);
- g.fillStyle='#f97316';g.fillRect(pad,H-alt+pad*.4,.45*u,alt-pad*1.2);
- let y=H-alt+pad;g.textBaseline='top';g.shadowColor='rgba(0,0,0,.6)';g.shadowBlur=u*.3;
- for(const [t,sz,w] of linhas){g.font=w+' '+sz+'px system-ui,-apple-system,Segoe UI,Roboto,Arial';g.fillStyle=w==='700'?'#fff':'#e8eef6';let txt=String(t);while(g.measureText(txt).width>W-pad*3.2&&txt.length>4)txt=txt.slice(0,-2);if(txt!==String(t))txt=txt.slice(0,-1)+'…';g.fillText(txt,pad*2,y);y+=sz*1.35;}
- g.shadowBlur=0;g.font='700 '+1.05*u+'px system-ui,Arial';g.fillStyle='rgba(255,255,255,.85)';const marca='LBO Campo';g.fillText(marca,W-pad-g.measureText(marca).width,pad);
- return await new Promise((ok,err)=>c.toBlob(b=>b?ok(b):err(Error('Não foi possível gerar a foto.')),'image/jpeg',.85));}
+ desenharCarimbo(g,W,H,info,cfgCarimbo());
+ return await new Promise((ok,err)=>c.toBlob(b=>b?ok(b):err(Error('Não foi possível gerar a foto.')),'image/jpeg',.88));}
 // ---------- V28.8: fotos em sequência. A câmera fica aberta na tela; o QR da sala escolhe o local; cada foto sai com o carimbo e vai direto para a fila ----------
-let cam=null,qrDet=null,qrTimer=null,seq=null;
-function pararCamera(){clearInterval(qrTimer);qrTimer=null;if(cam){cam.getTracks().forEach(t=>t.stop());cam=null;}const v=document.getElementById('seqV');if(v)v.srcObject=null;}
+let cam=null,qrDet=null,qrTimer=null,seq=null,ovTimer=null,gpsWatch=null;
+function pararCamera(){clearInterval(qrTimer);qrTimer=null;clearInterval(ovTimer);ovTimer=null;if(gpsWatch!==null){try{navigator.geolocation.clearWatch(gpsWatch);}catch(e){}gpsWatch=null;}if(cam){cam.getTracks().forEach(t=>t.stop());cam=null;}const v=document.getElementById('seqV');if(v)v.srcObject=null;}
 function lerEtiqueta(txt){try{const u=new URL(String(txt||'').trim());const o=u.searchParams.get('o');if(!o)return null;return {o,l:u.searchParams.get('l')||'',a:u.searchParams.get('a')||''};}catch(e){return null;}}
 async function sequencia(lid,aid){pararCamera();$('#t').textContent=obra.nome;iniciarGps();const ls_=locais();
  seq={l:ls_.some(x=>x.id===lid)?lid:'',a:aid||'',fotos:[],fila:Promise.resolve(),lendo:false,aviso:''};if(seq.l&&!ls_.find(x=>x.id===seq.l)?.ambientes?.some(x=>x.id===seq.a))seq.a='';
- app.innerHTML='<button class="back" id="bk">‹ Fotos</button><div class="seq"><div class="seq-cam"><video id="seqV" playsinline muted autoplay></video><div class="seq-sala" id="seqSala"></div><div class="seq-alvo" id="seqAlvo" hidden></div></div>'+
+ app.innerHTML='<button class="back" id="bk">‹ Locais</button><div class="seq"><div class="seq-cam" id="seqCam"><video id="seqV" playsinline muted autoplay></video><canvas id="seqOv" class="seq-ov"></canvas><div class="seq-sala" id="seqSala"></div><div class="seq-alvo" id="seqAlvo" hidden></div></div>'+
   '<div class="seq-bar"><button type="button" id="seqQR" class="seq-b">🔎 Ler QR</button><button type="button" id="seqFoto" class="seq-disp" aria-label="Tirar foto"></button><button type="button" id="seqFim" class="seq-b">Concluir</button></div>'+
-  '<div id="seqMsg"></div><div class="card"><label>Local</label><select id="sl"><option value="">Escolha ou leia o QR</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('')+'</select><label>Ambiente</label><select id="sa"></select>'+
-  '<label>Observação (opcional, vai no carimbo de todas)</label><input id="so" maxlength="120" placeholder="Ex.: antes da pintura"><p class="m" id="gpsTxt"></p></div>'+
-  '<div class="seq-cont" id="seqCont"></div><div class="seq-thumbs" id="seqTh"></div><input id="seqIn" type="file" accept="image/*" capture="environment" hidden></div>';
+  '<div id="seqMsg"></div><button type="button" class="seq-b seq-cfgb2" id="seqCfgB">⚙ Personalizar o carimbo</button><div class="card"><label>Local</label><select id="sl"><option value="">Escolha ou leia o QR</option>'+ls_.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('')+'</select><label>Ambiente</label><select id="sa"></select>'+
+  '<label>Observação (opcional, vai no carimbo de todas)</label><input id="so" maxlength="120" placeholder="Ex.: antes da pintura"><p class="m" id="gpsTxt"></p></div><div class="card seq-cfg" id="seqCfg" hidden></div>'+
+  '<div class="seq-cont" id="seqCont"></div><button type="button" class="seq-b seq-gf" id="seqGF" hidden>📤 Enviar ao Google Fotos / compartilhar</button><div class="seq-thumbs" id="seqTh"></div><input id="seqIn" type="file" accept="image/*" capture="environment" hidden></div><div class="seq-ver" id="seqVer" hidden></div>';
  atualizarGpsTela();
  const selAmb=()=>{const L=ls_.find(x=>x.id===seq.l);$('#sa').innerHTML='<option value="">'+(L?'Local inteiro':'—')+'</option>'+(L?.ambientes||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===seq.a?'selected':'')+'>'+esc(x.nome)+'</option>').join('');$('#sl').value=seq.l;};
  selAmb();$('#sl').onchange=()=>{seq.l=$('#sl').value;seq.a='';selAmb();seqAtualizar();};$('#sa').onchange=()=>{seq.a=$('#sa').value;seqAtualizar();};
- $('#bk').onclick=()=>fotos(seq.l,seq.a);$('#seqFim').onclick=()=>{pararCamera();fotos(seq.l,seq.a);if(seq.fotos.length)app.insertAdjacentHTML('afterbegin',msg('o',seq.fotos.length+' foto(s) desta sequência. As que estão na fila vão sozinhas quando houver internet.'));};
+ $('#bk').onclick=servicos;$('#seqFim').onclick=()=>{const n=seq.fotos.length;pararCamera();servicos();if(n)app.insertAdjacentHTML('afterbegin',msg('o',n+' foto(s) tirada(s). As que estão na fila vão sozinhas quando houver internet.'));};
+ $('#so').oninput=desenharOv;
+ $('#seqGF').onclick=async()=>{const novas=seq.fotos.filter(f=>f.blob&&!f.compartilhada),lista=novas.length?novas:seq.fotos;try{await compartilharFotos(lista);lista.forEach(f=>f.compartilhada=true);seqMsg('o','Escolha o Google Fotos (ou outro app) para guardar as '+lista.length+' foto(s). O LBO reconhece sala e data quando você importar do Google Fotos.');}catch(e){if(e.name!=='AbortError')seqMsg('w',e.message);}seqAtualizar();};$('#seqCfgB').onclick=()=>{const el=$('#seqCfg');el.hidden=!el.hidden;if(!el.hidden){montarCfg();el.scrollIntoView({behavior:'smooth',block:'nearest'});}};
+ $('#seqTh').onclick=e=>{const t=e.target.closest('[data-i]');if(t)verFoto(+t.dataset.i);};
  $('#seqQR').onclick=()=>{seq.lendo=true;seq.aviso='';seqAtualizar();lerQR();};
  $('#seqFoto').onclick=()=>{if(!seq.l)return seqMsg('w','Leia o QR da sala ou escolha o local antes da foto.');if(cam)capturar();else $('#seqIn').click();};
  $('#seqIn').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(f)processar(f);};
+ $('#seqV').addEventListener('loadedmetadata',ajustarCam);window.addEventListener('resize',ajustarCam);
+ if(navigator.geolocation){try{gpsWatch=navigator.geolocation.watchPosition(p=>{const novo=!gps.pos||Math.abs(gps.pos.lat-p.coords.latitude)>1e-4||Math.abs(gps.pos.lon-p.coords.longitude)>1e-4;gps.pos={lat:p.coords.latitude,lon:p.coords.longitude,prec:Math.round(p.coords.accuracy||0),em:Date.now()};gps.erro='';if(novo)gps.end='';atualizarGpsTela();if(novo)endereco().then(desenharOv);desenharOv();},()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}catch(e){}}
+ ovTimer=setInterval(desenharOv,1000);
  await abrirCamera();if(!seq.l&&cam){seq.lendo=true;lerQR();}seqAtualizar();}
+// Câmera do tamanho exato da imagem, para o carimbo na tela ficar igual ao da foto.
+function ajustarCam(){const v=$('#seqV'),box=$('#seqCam');if(!v||!box||!v.videoWidth)return;const r=v.videoWidth/v.videoHeight;box.style.aspectRatio=v.videoWidth+'/'+v.videoHeight;box.style.width='min(100%, calc(64vh * '+r.toFixed(4)+'))';desenharOv();}
+function desenharOv(){const cv=$('#seqOv');if(!cv||!seq)return;const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.round(cv.clientWidth*dpr),h=Math.round(cv.clientHeight*dpr);if(!w||!h)return;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+ const g=cv.getContext('2d');g.clearRect(0,0,w,h);desenharCarimbo(g,w,h,infoCarimbo(nomeSala(seq.l,seq.a)||'Escolha a sala',$('#so')?.value.trim()||''),cfgCarimbo());}
+function montarCfg(){const c=cfgCarimbo(),el=$('#seqCfg');const ck=(k,t)=>'<label class="seq-ck"><input type="checkbox" data-k="'+k+'" '+(c[k]?'checked':'')+'> '+t+'</label>';
+ const sel=(k,t,ops)=>'<label>'+t+'</label><select data-k="'+k+'">'+ops.map(([v,n])=>'<option value="'+v+'" '+(c[k]===v?'selected':'')+'>'+n+'</option>').join('')+'</select>';
+ el.innerHTML='<h2>⚙ Carimbo da foto</h2><p class="m">Escolha o que aparece. Vale para as próximas fotos deste celular e já aparece na câmera.</p>'+ck('salvar','Salvar cada foto no celular (Imagens › LBO Campo no app; Downloads no navegador)')+'<div class="seq-cks">'+ck('sala','Local / ambiente')+ck('data','Data e hora')+ck('seg','Segundos')+ck('obra','Nome da obra')+ck('gps','Coordenadas GPS')+ck('prec','Precisão do GPS')+ck('end','Endereço')+ck('autor','Quem tirou (e-mail)')+ck('obs','Observação')+ck('marca','Marca "LBO Campo"')+'</div>'+
+  sel('fmt','Formato das coordenadas',[['dec','Decimal (-6.851234, -35.489111)'],['gms','Graus, minutos e segundos']])+sel('pos','Posição',[['baixo','Embaixo'],['topo','Em cima']])+sel('tam','Tamanho do texto',[['p','Pequeno'],['m','Médio'],['g','Grande']])+sel('fundo','Fundo',[['degrade','Sombreado'],['faixa','Faixa escura'],['nenhum','Sem fundo']])+
+  '<label>Texto fixo (opcional)</label><input data-k="texto" maxlength="80" value="'+esc(c.texto)+'" placeholder="Ex.: Acrópoles Engenharia · Fiscalização"><button type="button" class="seq-b" id="cfgPadrao" style="margin-top:12px;width:100%">Voltar ao padrão</button>';
+ const salvar=()=>{const n={...cfgCarimbo()};el.querySelectorAll('[data-k]').forEach(i=>{n[i.dataset.k]=i.type==='checkbox'?i.checked:i.value;});ls.set('lboCampoCarimbo',n);desenharOv();};
+ el.onchange=salvar;el.oninput=e=>{if(e.target.dataset.k==='texto')salvar();};$('#cfgPadrao').onclick=()=>{ls.set('lboCampoCarimbo',null);montarCfg();desenharOv();};}
+function verFoto(i){const f=seq?.fotos[i];if(!f?.blob)return;const el=$('#seqVer');el.hidden=false;
+ el.innerHTML='<div class="seq-ver-in"><img src="'+f.url+'" alt=""><div class="seq-bar2"><button type="button" class="seq-b" id="verShare">💾 Salvar / compartilhar</button><button type="button" class="seq-b" id="verX">Fechar</button></div></div>';
+ $('#verX').onclick=()=>{el.hidden=true;el.innerHTML='';};
+ $('#verShare').onclick=async()=>{try{await compartilharFotos([f]);f.compartilhada=true;}catch(e){if(e.name==='AbortError')return;if(!(await salvarNoCelular(f.blob,f.nome)))seqMsg('w',e.message);}};}
 async function abrirCamera(){try{if(!navigator.mediaDevices?.getUserMedia)throw Error('sem câmera');
   const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:2560},height:{ideal:1920}},audio:false});
   if(!seq||!document.getElementById('seqV')){st.getTracks().forEach(t=>t.stop());return;}cam=st;const v=$('#seqV');v.hidden=false;v.srcObject=cam;await v.play().catch(()=>{});}
@@ -285,10 +336,10 @@ async function abrirCamera(){try{if(!navigator.mediaDevices?.getUserMedia)throw 
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(cam){clearInterval(qrTimer);qrTimer=null;cam.getTracks().forEach(t=>t.stop());cam=null;}}else if(seq&&document.getElementById('seqV')&&!cam)abrirCamera().then(()=>{if(seq.lendo)lerQR();});});
 function seqMsg(c,t){const el=$('#seqMsg');if(el)el.innerHTML=t?msg(c,t):'';}
 function seqAtualizar(){if(!seq||!$('#seqSala'))return;const sala=nomeSala(seq.l,seq.a);
- $('#seqSala').innerHTML=seq.lendo?'🔎 Aponte para o QR da sala…':sala?'📍 '+esc(sala):'Leia o QR ou escolha o local abaixo';$('#seqSala').classList.toggle('vazio',!sala||seq.lendo);$('#seqAlvo').hidden=!seq.lendo;
- $('#seqFoto').disabled=!seq.l;const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
+ $('#seqSala').innerHTML=seq.lendo?'🔎 Aponte para o QR da sala…':'Leia o QR ou escolha o local abaixo';$('#seqSala').hidden=!!sala&&!seq.lendo;$('#seqSala').classList.toggle('vazio',true);desenharOv();$('#seqAlvo').hidden=!seq.lendo;
+ $('#seqFoto').disabled=!seq.l;const gf=$('#seqGF'),nb=seq.fotos.filter(f=>f.blob).length,nn=seq.fotos.filter(f=>f.blob&&!f.compartilhada).length;gf.hidden=!nb;gf.textContent='📤 Enviar ao Google Fotos / compartilhar ('+(nn||nb)+')';const n=seq.fotos.length,env=seq.fotos.filter(f=>fotosEnviadas.has(f.filaId)).length,err=seq.fotos.filter(f=>f.erro).length;
  $('#seqCont').textContent=n?n+' foto'+(n===1?'':'s')+' · '+env+' enviada'+(env===1?'':'s')+(n-env-err>0?' · '+(n-env-err)+' na fila':'')+(err?' · '+err+' com erro':''):'';
- $('#seqTh').innerHTML=seq.fotos.slice().reverse().map(f=>'<div class="seq-th"><img src="'+f.url+'" alt=""><span>'+(f.erro?'⚠':fotosEnviadas.has(f.filaId)?'✓':f.filaId?'⏳':'…')+'</span><small>'+esc(f.salaCurta)+'</small></div>').join('');}
+ $('#seqTh').innerHTML=seq.fotos.map((f,i)=>[f,i]).reverse().map(([f,i])=>'<div class="seq-th" data-i="'+i+'"><img src="'+f.url+'" alt=""><span>'+(f.erro?'⚠':fotosEnviadas.has(f.filaId)?'✓':f.filaId?'⏳':'…')+'</span><small>'+esc(f.salaCurta)+'</small></div>').join('');}
 async function lerQR(){clearInterval(qrTimer);qrTimer=null;
  if(!('BarcodeDetector' in window)){seq.lendo=false;seqAtualizar();return seqMsg('w','Este celular não lê o QR dentro do LBO Campo. Escolha o local e o ambiente na lista abaixo.');}
  try{if(!qrDet)qrDet=new BarcodeDetector({formats:['qr_code']});}catch(e){seq.lendo=false;seqAtualizar();return seqMsg('w','Leitor de QR indisponível neste celular. Escolha o local na lista abaixo.');}
@@ -307,10 +358,13 @@ async function capturar(){const v=$('#seqV');if(!cam||!v)return;const bt=$('#seq
  try{if(window.ImageCapture&&tr){blob=await new ImageCapture(tr).takePhoto();}}catch(e){blob=null;}
  if(!blob){const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;if(!c.width)return seqMsg('w','A câmera ainda está abrindo. Tente de novo.');c.getContext('2d').drawImage(v,0,0);blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.92));}
  processar(blob);}
-function processar(arquivo){if(!seq)return;const l=seq.l,a=seq.a,sala=nomeSala(l,a)||'Sem local',obs=$('#so')?.value.trim()||'',em=new Date(),gp=gps.pos&&Date.now()-gps.pos.em<5*60000?gps.pos:null,end=gps.end;
+function processar(arquivo){if(!seq)return;const l=seq.l,a=seq.a,sala=nomeSala(l,a)||'Sem local',obs=$('#so')?.value.trim()||'',em=new Date(),info=infoCarimbo(sala,obs,em),gp=info.p,end=info.end;
  const item={salaCurta:(locais().find(x=>x.id===l)?.ambientes?.find(x=>x.id===a)?.nome)||sala,url:'',filaId:'',erro:''};const lista=seq.fotos;lista.push(item);seqAtualizar();
- seq.fila=seq.fila.then(async()=>{try{const blob=await carimbar(arquivo,{sala,obs});item.url=URL.createObjectURL(blob);
-   const f={blob,nome:nomeFoto(sala),l,a,sala,obs,gps:gp,end,em};await fotoParaFila(f);item.filaId=f.filaId;}catch(x){item.erro=x.message||'erro';seqMsg('e','Uma foto não foi guardada: '+item.erro);}
+ seq.fila=seq.fila.then(async()=>{try{const id=novoIdFoto(),nome=nomeFoto(sala,em);
+   const blob=await comExif(await carimbar(arquivo,info),{id,obra:obra.id,obraNome:obra.nome,l,a,sala,obs,autor:S?.user?.email||'',em:em.toISOString(),dia:hoje(),lat:gp?gp.lat:null,lon:gp?gp.lon:null,prec:gp?gp.prec:null,end:end||''});
+   item.url=URL.createObjectURL(blob);item.blob=blob;item.nome=nome;
+   if(cfgCarimbo().salvar)item.salva=await salvarNoCelular(blob,nome);
+   const f={id,blob,nome,l,a,sala,obs,gps:gp,end,em};await fotoParaFila(f);item.filaId=f.filaId;}catch(x){item.erro=x.message||'erro';seqMsg('e','Uma foto não foi guardada: '+item.erro);}
   seqAtualizar();enviarFotos();});}
 function fila(){return ls.get('lboCampoFila',[]);}
 function mostrarFila(){const f=fila(),n=nFotosFila;$('#fila').hidden=!f.length&&!n;$('#filaTxt').textContent=[f.length?f.length+' registro(s)':'',n?n+' foto(s)':''].filter(Boolean).join(' e ')+' aguardando envio';}
@@ -319,7 +373,7 @@ async function enviar(){if(enviando)return;const f=fila();if(!f.length){mostrarF
  try{const body=f.map(({local,...r})=>({...r,id:'c'+S.user.id.slice(0,8)+'_'+local}));await api('lbo_campo_registros',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});
   regs=[...body.map(r=>({...r,criado_em:new Date().toISOString(),importado_em:null})),...regs];ls.set('lboCampoFila',fila().filter(x=>!f.some(y=>y.local===x.local)));}
  catch(e){/* sem conexão: fica na fila */}finally{enviando=false;mostrarFila();}}
-$('#filaBtn').onclick=()=>Promise.all([enviar(),enviarFotos()]).then(()=>{if(obra&&pac&&!$('#cam'))servicos();});
+$('#filaBtn').onclick=()=>Promise.all([enviar(),enviarFotos()]).then(()=>{if(obra&&pac&&!$('#seqV'))servicos();});
 $('#sair').onclick=()=>{if((fila().length||nFotosFila)&&!confirm('Há registros ou fotos na fila. Sair mesmo assim? Eles continuam guardados neste celular.'))return;S=null;ls.set('lboCampoSessao',null);login();};
 window.addEventListener('online',()=>{enviar();enviarFotos();});setInterval(()=>{if(navigator.onLine){enviar();enviarFotos();}},60000);
 // App do Android (V28.7.1): avisa quando há APK novo na página de download.
