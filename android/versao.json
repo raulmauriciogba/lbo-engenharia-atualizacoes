@@ -1,7 +1,7 @@
 {
- "versao": "28.9.3",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.3/LBO_Campo_28.9.3.apk",
+ "versao": "28.9.4",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.4/LBO_Campo_28.9.4.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-15T14:19:35.833Z",
- "notas": "Honorários com valor definido dividido entre as disciplinas; equipe do projeto acima das etapas; nova etapa com lista com rolagem e disciplina nova"
+ "data": "2026-11-15T19:08:17.298Z",
+ "notas": "Capa dos projetos (imagem ou cor), etapas na largura toda e quadros do projeto organizáveis; LBO Campo mostra na hora os percentuais lançados"
 }
