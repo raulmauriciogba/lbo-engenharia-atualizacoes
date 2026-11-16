@@ -1,7 +1,7 @@
 {
- "versao": "28.9.9",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.9/LBO_Campo_28.9.9.apk",
+ "versao": "28.9.10",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.10/LBO_Campo_28.9.10.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T01:46:26.830Z",
- "notas": "Valor de cada disciplina estimado pelos parâmetros de honorários quando não há proposta, com edição nas Propriedades"
+ "data": "2026-11-16T13:46:51.186Z",
+ "notas": "Serviços da semana separados em blocos na grade e na impressão, sem confundir quebra de linha com outro serviço"
 }
