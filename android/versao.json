@@ -1,7 +1,7 @@
 {
- "versao": "28.9.12",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.12/LBO_Campo_28.9.12.apk",
+ "versao": "28.9.13",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.13/LBO_Campo_28.9.13.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T14:29:52.020Z",
- "notas": "Linha de Balanço como no MS Project: barras seguem a execução real e a previsão, linha de base mostra o planejado, serviços concluídos mais apagados"
+ "data": "2026-11-16T14:43:47.244Z",
+ "notas": "Linha de Balanço: inativar e reativar serviço e dividir tarefa com pausa, pelo botão direito, como no MS Project"
 }
