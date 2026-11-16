@@ -1,7 +1,7 @@
 {
- "versao": "28.9.16",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.16/LBO_Campo_28.9.16.apk",
+ "versao": "28.9.17",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.17/LBO_Campo_28.9.17.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T17:37:12.633Z",
- "notas": "Linha de Balanço: com as barras pela execução real, a linha de base vira uma linha fina sob a barra e o período real deixa de aparecer repetido"
+ "data": "2026-11-16T17:50:35.692Z",
+ "notas": "LBO Campo Android: botões de volume disparam a câmera e cada foto vai direto para a galeria"
 }
