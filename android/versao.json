@@ -1,7 +1,7 @@
 {
- "versao": "28.9.18",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.18/LBO_Campo_28.9.18.apk",
+ "versao": "28.9.19",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.19/LBO_Campo_28.9.19.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T18:00:32.441Z",
- "notas": "Linha de Balanço: tarefa dividida mostra o pontilhado da pausa também em serviços em execução e concluídos"
+ "data": "2026-11-16T18:17:49.503Z",
+ "notas": "Linha de Balanço: divisão da tarefa não some mais nas barras pela execução real e pode ser editada pelo botão direito"
 }
