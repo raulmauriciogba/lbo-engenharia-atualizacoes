@@ -1,7 +1,7 @@
 {
- "versao": "28.9.15",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.15/LBO_Campo_28.9.15.apk",
+ "versao": "28.9.16",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.16/LBO_Campo_28.9.16.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T17:21:32.690Z",
- "notas": "LBO Campo mostra a versão do app Android na lista de obras"
+ "data": "2026-11-16T17:37:12.633Z",
+ "notas": "Linha de Balanço: com as barras pela execução real, a linha de base vira uma linha fina sob a barra e o período real deixa de aparecer repetido"
 }
