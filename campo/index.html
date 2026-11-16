@@ -121,14 +121,19 @@ async function abrirObra(id){app.innerHTML='<p class="m">Carregando…</p>';
  catch(e){pac=ls.get('lboCampoPac_'+id,null);regs=ls.get('lboCampoRegs_'+id,[]);if(!pac){app.innerHTML=msg('e',e.message)+'<button class="p" onclick="obras()">Voltar</button>';return;}obra={id,nome:pac.obra?.nome||'Obra'};}
  if(LINK&&LINK.o===id){const k=LINK;sessionStorage.removeItem('lboCampoLink');fotos(k.l,k.a);return;}
  servicos();}
-function ultimo(sid,u){const s=pac.servicos.find(x=>x.id===sid);let best={qtd:Number(s?.exec?.[u-1])||0,data:s?.execData?.[u-1]||'',src:'programa'};
- const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u&&!r.sub_id),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u&&!r.sub_id)];
- for(const r of cands)if(String(r.data)>=String(best.data)){best={qtd:Number(r.qtd),data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
+// V28.9.4: vale o registro mais novo deste celular que o programa ainda não tem (enviado, na fila ou importado depois da última publicação),
+// mesmo que a data dele seja anterior à do último lançamento feito no programa. Entre eles, o de data mais nova (e, no mesmo dia, o lançado por último).
+function regsPendentes(f){const g=String(pac?.gerado_em||'');
+ const lista=[...regs.filter(r=>f(r)&&(!r.importado_em||!g||String(r.importado_em)>g)),...fila().filter(r=>r.obra_id===obra.id&&f(r))];
+ const chave=r=>String(r.data||'')+'|'+String(r.criado_em||(r.local?new Date(r.local).toISOString():''));
+ return lista.reduce((m,r)=>!m||chave(r)>=chave(m)?r:m,null);}
+const origem=r=>r.importado_em?'importado':(r.criado_em?'enviado':'na fila');
+function ultimo(sid,u){const s=pac.servicos.find(x=>x.id===sid);const r=regsPendentes(x=>x.servico_id===sid&&x.setor===u&&!x.sub_id);
+ return r?{qtd:Number(r.qtd),data:r.data,src:origem(r)}:{qtd:Number(s?.exec?.[u-1])||0,data:s?.execData?.[u-1]||'',src:'programa'};}
 // Sub-serviços (barras dentro do serviço, vindos do MS Project): o % de cada um, pelo último registro deste celular ou o do programa.
 function temSubs(s,u){return !!(s.subs||[]).some(x=>x.pct[u-1]!==null&&x.pct[u-1]!==undefined);}
-function ultimoSub(sid,u,x){let best={pct:Number(x.pct[u-1])||0,data:'',src:'programa'};const s=pac.servicos.find(v=>v.id===sid),d0=s?.execData?.[u-1]||'';best.data=d0;
- const cands=[...regs.filter(r=>r.servico_id===sid&&r.setor===u&&r.sub_id===x.id),...fila().filter(r=>r.obra_id===obra.id&&r.servico_id===sid&&r.setor===u&&r.sub_id===x.id)];
- for(const r of cands)if(String(r.data)>=String(best.data)){best={pct:Number(r.pct)||0,data:r.data,src:r.importado_em?'importado':(r.criado_em?'enviado':'na fila')};}return best;}
+function ultimoSub(sid,u,x){const s=pac.servicos.find(v=>v.id===sid),r=regsPendentes(v=>v.servico_id===sid&&v.setor===u&&v.sub_id===x.id);
+ return r?{pct:Number(r.pct)||0,data:r.data,src:origem(r)}:{pct:Number(x.pct[u-1])||0,data:s?.execData?.[u-1]||'',src:'programa'};}
 function pctSubs(s,u){let W=0,A=0;for(const x of s.subs||[]){if(x.pct[u-1]===null||x.pct[u-1]===undefined)continue;const w=Number(x.w?.[u-1])||1;W+=w;A+=w*ultimoSub(s.id,u,x).pct;}return W?A/W:0;}
 // V28.8: primeiro o local (pavimento/setor), depois os serviços daquele local.
 function pctServ(s,u){const q=+s.dist[u-1]||0;if(!(q>0))return null;return temSubs(s,u)?pctSubs(s,u):Math.min(100,ultimo(s.id,u).qtd/q*100);}
@@ -371,7 +376,7 @@ function mostrarFila(){const f=fila(),n=nFotosFila;$('#fila').hidden=!f.length&&
 let enviando=false;
 async function enviar(){if(enviando)return;const f=fila();if(!f.length){mostrarFila();return;}enviando=true;
  try{const body=f.map(({local,...r})=>({...r,id:'c'+S.user.id.slice(0,8)+'_'+local}));await api('lbo_campo_registros',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});
-  regs=[...body.map(r=>({...r,criado_em:new Date().toISOString(),importado_em:null})),...regs];ls.set('lboCampoFila',fila().filter(x=>!f.some(y=>y.local===x.local)));}
+  regs=[...body.map(r=>({...r,criado_em:new Date().toISOString(),importado_em:null})),...regs];try{ls.set('lboCampoRegs_'+obra.id,regs);}catch(e){}ls.set('lboCampoFila',fila().filter(x=>!f.some(y=>y.local===x.local)));}
  catch(e){/* sem conexão: fica na fila */}finally{enviando=false;mostrarFila();}}
 $('#filaBtn').onclick=()=>Promise.all([enviar(),enviarFotos()]).then(()=>{if(obra&&pac&&!$('#seqV'))servicos();});
 $('#sair').onclick=()=>{if((fila().length||nFotosFila)&&!confirm('Há registros ou fotos na fila. Sair mesmo assim? Eles continuam guardados neste celular.'))return;S=null;ls.set('lboCampoSessao',null);login();};
