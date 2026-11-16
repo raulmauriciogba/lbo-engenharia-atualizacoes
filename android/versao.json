@@ -1,7 +1,7 @@
 {
- "versao": "28.9.7",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.7/LBO_Campo_28.9.7.apk",
+ "versao": "28.9.8",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.8/LBO_Campo_28.9.8.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T01:05:11.747Z",
- "notas": "Parceiros do projeto aparecem ao abrir o projeto, sem precisar atualizar na tela Parceiros"
+ "data": "2026-11-16T01:17:07.639Z",
+ "notas": "Valor de cada disciplina nas abas das etapas e Propriedades da disciplina no botão direito (valor, nome e observações)"
 }
