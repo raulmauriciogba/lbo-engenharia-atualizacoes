@@ -1,7 +1,7 @@
 {
- "versao": "28.9.13",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.13/LBO_Campo_28.9.13.apk",
+ "versao": "28.9.14",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.14/LBO_Campo_28.9.14.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-16T14:43:47.244Z",
- "notas": "Linha de Balanço: inativar e reativar serviço e dividir tarefa com pausa, pelo botão direito, como no MS Project"
+ "data": "2026-11-16T15:00:44.650Z",
+ "notas": "Cor de destaque personalizável em Configurações > Aparência, com cores prontas e escolha livre"
 }
