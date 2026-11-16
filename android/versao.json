@@ -1,7 +1,7 @@
 {
- "versao": "28.9.6",
- "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.6/LBO_Campo_28.9.6.apk",
+ "versao": "28.9.7",
+ "url": "https://github.com/raulmauriciogba/lbo-engenharia-atualizacoes/releases/download/campo-android-v28.9.7/LBO_Campo_28.9.7.apk",
  "pagina": "https://raulmauriciogba.github.io/lbo-engenharia-atualizacoes/android/",
- "data": "2026-11-15T19:18:51.205Z",
- "notas": "Pagamento ao escritório parceiro nas parcelas do projeto, com vencimento, pagar/desfazer e resumo do que fica para o escritório"
+ "data": "2026-11-16T01:05:11.747Z",
+ "notas": "Parceiros do projeto aparecem ao abrir o projeto, sem precisar atualizar na tela Parceiros"
 }
